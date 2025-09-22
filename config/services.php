@@ -1,7 +1,6 @@
 <?php
 
 return [
-
     /*
     |--------------------------------------------------------------------------
     | Third Party Services
@@ -35,4 +34,9 @@ return [
         ],
     ],
 
+    // Zoho Mail webhook configuration
+    'zoho_mail' => [
+        // Set ZOHO_MAIL_WEBHOOK_SECRET in your .env for signature verification
+        'webhook_secret' => env('ZOHO_MAIL_WEBHOOK_SECRET'),
+    ],
 ];

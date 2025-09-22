@@ -3,6 +3,7 @@
 use App\Services\EmailToTicketService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\ZohoWebhookController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -22,3 +23,6 @@ Route::middleware([
         return view('email-threading-dashboard');
     })->name('email.threading.dashboard');
 });
+
+// Zoho Mail webhook endpoint (public POST)
+Route::post('/webhooks/zoho-mail', [ZohoWebhookController::class, 'handle'])->name('webhooks.zoho_mail');
