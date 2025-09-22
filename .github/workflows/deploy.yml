@@ -1,0 +1,26 @@
+name: Deploy DirectAdmin
+
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to Server
+        uses: easingthemes/ssh-deploy@main
+        with:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          ARGS: "-rlgoDzvc -i --delete"
+          SOURCE: "."
+          REMOTE_HOST: 162.255.160.98
+          REMOTE_USER: desarrollo
+          TARGET: "domains/desk.taraerolineas.app"
+          EXCLUDE: ".git/, .github/, node_modules/, vendor/, .env, storage/*.log, storage/app/, storage/framework/, storage/logs/"
+          SCRIPT_AFTER: |
+            cd domains/desk.taraerolineas.app/
+            npm run build
+            echo $RSYNC_STDOUT
