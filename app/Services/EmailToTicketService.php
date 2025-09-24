@@ -313,7 +313,11 @@ class EmailToTicketService
      */
     private function cleanEmailBody(string $body): string
     {
-        // Remover HTML si existe
+        // Eliminar bloques <style>...</style>
+        $body = preg_replace('/<style[^>]*>.*?<\/style>/is', '', $body);
+        // Eliminar etiquetas <meta>
+        $body = preg_replace('/<meta[^>]*>/is', '', $body);
+        // Remover HTML
         $body = strip_tags($body);
 
         // Remover firmas comunes
@@ -321,7 +325,6 @@ class EmailToTicketService
         $body = preg_replace('/^Enviado desde mi .*/m', '', $body);
 
         // Eliminar bloques de encabezados de correo (De:, Enviado:, Para:, Asunto:)
-        // Si aparece un bloque de encabezados, cortar el texto ahí
         $headerBlockPattern = '/(De:.*?Asunto:.*?\n)/is';
         if (preg_match($headerBlockPattern, $body, $matches, PREG_OFFSET_CAPTURE)) {
             $body = substr($body, 0, $matches[0][1]);
