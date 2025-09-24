@@ -44,9 +44,16 @@ class TicketReplyMail extends Mailable
         if (!empty($this->reply->attachments) && is_array($this->reply->attachments)) {
             foreach ($this->reply->attachments as $attachment) {
                 if (!empty($attachment['path'])) {
-                    $mail->attach(storage_path('app/' . $attachment['path']), [
-                        'as' => $attachment['name'] ?? basename($attachment['path'])
-                    ]);
+                    $filePath = storage_path('app/' . $attachment['path']);
+                    if (!file_exists($filePath)) {
+                        // Intentar con storage/app/public si no existe en storage/app
+                        $filePath = storage_path('app/public/' . $attachment['path']);
+                    }
+                    if (file_exists($filePath)) {
+                        $mail->attach($filePath, [
+                            'as' => $attachment['name'] ?? basename($attachment['path'])
+                        ]);
+                    }
                 }
             }
         }
@@ -63,4 +70,3 @@ class TicketReplyMail extends Mailable
         return $mail;
     }
 }
-
