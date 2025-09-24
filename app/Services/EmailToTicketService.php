@@ -138,8 +138,7 @@ class EmailToTicketService
             'customer_id' => $customer->id,
             'created_by' => $this->getSystemUserId(),
             'subject' => $this->cleanSubject($emailData['subject'] ?? 'Email sin asunto'),
-            // Usar body_text y body_html correctamente
-            'description' => $this->cleanEmailBody($emailData['body_text'] ?? $emailData['body_html'] ?? ''),
+            'description' => $this->cleanEmailBody($emailData['body_html'] ?? ''),
             'category' => $category,
             'priority' => $priority,
             'status' => 'open',
@@ -173,9 +172,8 @@ class EmailToTicketService
 
         TicketReply::create([
             'ticket_id' => $ticket->id,
-            'user_id' => $user ? $user->id : $ticket->customer->id, // Si no es usuario, usar customer
-            // Usar body_text y body_html correctamente
-            'message' => $this->cleanEmailBody($emailData['body_text'] ?? $emailData['body_html'] ?? ''),
+            'user_id' => $user ? $user->id : $ticket->customer->id,
+            'message' => $this->cleanEmailBody($emailData['body_html'] ?? ''),
             'type' => 'reply',
             'is_customer_visible' => true,
             'email_message_id' => $emailData['message_id'] ?? null,

@@ -152,14 +152,9 @@ class ZohoWebhookController extends BaseController
             'to_email'      => $container['toAddress'] ?? null,
             'subject'       => $container['subject'] ?? null,
             'body_html'     => $container['html'] ?? null,
-            'body_text'     => $container['summary'] ?? null,
             'message_id'    => $container['messageIdString'] ?? $container['messageId'] ?? null,
             'sender_name'   => $container['sender'] ?? null,
-            'received_time' => $container['receivedTime'] ?? $container['sentDateInGMT'] ?? null,
-            'folder_id'     => $container['folderId'] ?? null,
-            'zuid'          => $container['zuid'] ?? null,
-            'size'          => $container['size'] ?? null,
-            'integ_id'      => $container['integId'] ?? null,
+            'received_time' => $container['receivedTime'] ?? null,
         ];
 
         // Log missing critical fields for debugging
