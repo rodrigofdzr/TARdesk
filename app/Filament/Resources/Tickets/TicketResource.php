@@ -6,7 +6,7 @@ use App\Filament\Resources\Tickets\Pages\CreateTicket;
 use App\Filament\Resources\Tickets\Pages\EditTicket;
 use App\Filament\Resources\Tickets\Pages\ListTickets;
 use App\Filament\Resources\Tickets\RelationManagers\RepliesRelationManager;
-use App\Models\Ticket
+use App\Models\Ticket;
 use Illuminate\Support\HtmlString;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
