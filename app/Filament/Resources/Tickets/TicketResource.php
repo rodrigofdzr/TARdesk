@@ -35,8 +35,9 @@ class TicketResource extends Resource
             \Filament\Forms\Components\Placeholder::make('email_info')
                 ->label('Información de Email')
                 ->content(function ($record) {
+                    use Illuminate\Support\HtmlString;
                     if (!$record || $record->source !== 'email') {
-                        return 'Este ticket no fue creado desde email';
+                        return new HtmlString('Este ticket no fue creado desde email');
                     }
 
                     $info = [];
@@ -51,8 +52,8 @@ class TicketResource extends Resource
                         $info[] = "✉️ {$emailReplies} respuestas por email en el thread";
                     }
 
-                    // Usar saltos de línea y luego convertir a <br>
-                    return nl2br(implode(PHP_EOL, $info));
+                    // Usar <br> y forzar renderizado con HtmlString
+                    return new HtmlString(implode('<br />', $info));
                 })
                 ->visible(fn ($record) => $record && $record->source === 'email')
                 ->columnSpanFull(),
