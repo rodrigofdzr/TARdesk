@@ -6,7 +6,8 @@ use App\Filament\Resources\Tickets\Pages\CreateTicket;
 use App\Filament\Resources\Tickets\Pages\EditTicket;
 use App\Filament\Resources\Tickets\Pages\ListTickets;
 use App\Filament\Resources\Tickets\RelationManagers\RepliesRelationManager;
-use App\Models\Ticket;
+use App\Models\Ticket
+use Illuminate\Support\HtmlString;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Table;
@@ -35,7 +36,6 @@ class TicketResource extends Resource
             \Filament\Forms\Components\Placeholder::make('email_info')
                 ->label('Información de Email')
                 ->content(function ($record) {
-                    use Illuminate\Support\HtmlString;
                     if (!$record || $record->source !== 'email') {
                         return new HtmlString('Este ticket no fue creado desde email');
                     }
