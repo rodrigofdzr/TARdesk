@@ -169,11 +169,20 @@ class EmailToTicketService
         // Buscar si el email es de un usuario del sistema o del cliente
         $user = User::where('email', $emailData['from_email'])->first();
         $isFromCustomer = !$user;
-
+        $cleanedMessage = $this->cleanEmailBody($emailData['body_html'] ?? '');
+        // Filtrar mensajes automáticos del sistema
+        if (strpos($cleanedMessage, 'TARdesk - Atención al Cliente Respuesta a su ticket de soporte') !== false) {
+            Log::info('Mensaje automático detectado, no se crea respuesta', [
+                'ticket_id' => $ticket->id,
+                'ticket_number' => $ticket->ticket_number,
+                'message' => $cleanedMessage
+            ]);
+            return $ticket;
+        }
         TicketReply::create([
             'ticket_id' => $ticket->id,
             'user_id' => $user ? $user->id : $ticket->customer->id,
-            'message' => $this->cleanEmailBody($emailData['body_html'] ?? ''),
+            'message' => $cleanedMessage,
             'type' => 'reply',
             'is_customer_visible' => true,
             'email_message_id' => $emailData['message_id'] ?? null,
