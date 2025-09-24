@@ -143,78 +143,30 @@ class ZohoWebhookController extends BaseController
 
     private function mapZohoPayloadToEmailData(array $payload): array
     {
-        // Zoho may send different shapes; attempt to find the message container
-        $container = $payload['message'] ?? $payload['mail'] ?? $payload['data'] ?? $payload;
+        // Zoho sends the email data inside the 'payload' key
+        $container = $payload['payload'] ?? $payload;
 
-        // If data is an array with a single element 'message' inside, unwrap
-        if (isset($container['message']) && is_array($container['message'])) {
-            $container = $container['message'];
-        }
-
-        // Helper to read keys case-insensitively
-        $get = function ($keys) use ($container) {
-            foreach ((array) $keys as $k) {
-                if (is_array($container) && array_key_exists($k, $container) && $container[$k] !== null) {
-                    return $container[$k];
-                }
-
-                // try lowercase key
-                $lk = strtolower($k);
-                foreach ($container as $ck => $cv) {
-                    if (strtolower($ck) === $lk) {
-                        return $cv;
-                    }
-                }
-            }
-
-            return null;
-        };
-
-        $subject = $get(['subject', 'Subject']);
-        $messageId = $get(['message_id', 'Message-ID', 'messageId', 'msg_id']);
-        $inReplyTo = $get(['in_reply_to', 'In-Reply-To', 'inReplyTo']);
-        $references = $get(['references', 'References']);
-        if (is_string($references)) {
-            $references = preg_split('/\s+/', trim($references));
-        }
-
-        $from = $get(['from', 'From', 'sender']);
-        $fromEmail = null;
-        $fromName = null;
-
-        if (is_array($from)) {
-            // Zoho may provide {"email":"","name":""}
-            $fromEmail = $from['email'] ?? $from['mail'] ?? $from['address'] ?? null;
-            $fromName = $from['name'] ?? $from['displayName'] ?? null;
-        } elseif (is_string($from)) {
-            // Try parse "Name <email@host>"
-            if (preg_match('/<([^>]+)>/', $from, $m)) {
-                $fromEmail = $m[1];
-                $fromName = trim(str_replace("<{$fromEmail}>", '', $from));
-            } elseif (filter_var($from, FILTER_VALIDATE_EMAIL)) {
-                $fromEmail = $from;
-            }
-        }
-
-        // Fallbacks
-        $body = $get(['body', 'content', 'plainText', 'text_body', 'message_body']) ?? '';
-        $htmlBody = $get(['html', 'htmlBody', 'html_content']) ?? '';
-        $date = $get(['date', 'received_at', 'timestamp']) ?? null;
-
-        return [
-            'message_id' => $messageId,
-            'in_reply_to' => $inReplyTo,
-            'references' => (array) ($references ?? []),
-            'subject' => $subject ?? 'Sin asunto',
-            'from_email' => $fromEmail,
-            'from_name' => $fromName,
-            'body' => is_string($body) ? $body : (string) json_encode($body),
-            'html_body' => is_string($htmlBody) ? $htmlBody : null,
-            'attachments' => [],
-            'date' => $date,
-            // Raw payload for debugging/metadata
-            'raw_payload' => $payload,
+        // Map Zoho fields to internal format
+        $emailData = [
+            'from_email'    => $container['fromAddress'] ?? null,
+            'to_email'      => $container['toAddress'] ?? null,
+            'subject'       => $container['subject'] ?? null,
+            'body_html'     => $container['html'] ?? null,
+            'body_text'     => $container['summary'] ?? null,
+            'message_id'    => $container['messageIdString'] ?? $container['messageId'] ?? null,
+            'sender_name'   => $container['sender'] ?? null,
+            'received_time' => $container['receivedTime'] ?? $container['sentDateInGMT'] ?? null,
+            'folder_id'     => $container['folderId'] ?? null,
+            'zuid'          => $container['zuid'] ?? null,
+            'size'          => $container['size'] ?? null,
+            'integ_id'      => $container['integId'] ?? null,
         ];
+
+        // Log missing critical fields for debugging
+        if (empty($emailData['from_email']) || empty($emailData['subject'])) {
+            Log::warning('Zoho webhook mapping: missing from_email or subject', ['container' => $container]);
+        }
+
+        return $emailData;
     }
 }
-
