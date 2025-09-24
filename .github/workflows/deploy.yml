@@ -19,7 +19,7 @@ jobs:
           REMOTE_HOST: 162.255.160.98
           REMOTE_USER: desarrollo
           TARGET: "domains/desk.taraerolineas.app"
-          EXCLUDE: ".git/, .github/, node_modules/, vendor/, .env, storage/*.log, storage/app/, storage/framework/, storage/logs/"
+          EXCLUDE: ".git/, .github/, node_modules/, vendor/, .env, storage/*.log, storage/app/, storage/framework/, storage/logs/, database/database.sqlite"
           SCRIPT_AFTER: |
             cd domains/desk.taraerolineas.app/
             npm run build

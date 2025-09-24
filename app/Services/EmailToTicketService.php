@@ -122,7 +122,8 @@ class EmailToTicketService
             'customer_id' => $customer->id,
             'created_by' => $this->getSystemUserId(),
             'subject' => $this->cleanSubject($emailData['subject'] ?? 'Email sin asunto'),
-            'description' => $this->cleanEmailBody($emailData['body'] ?? $emailData['html_body'] ?? ''),
+            // Usar body_text y body_html correctamente
+            'description' => $this->cleanEmailBody($emailData['body_text'] ?? $emailData['body_html'] ?? ''),
             'category' => $category,
             'priority' => $priority,
             'status' => 'open',
@@ -368,6 +369,17 @@ class EmailToTicketService
             $systemUser = User::where('is_active', true)->first();
         }
 
-        return $systemUser->id ?? 1; // Fallback al ID 1 si no hay usuarios
+        if (!$systemUser) {
+            // Si no existe ningún usuario, crear uno por defecto
+            $systemUser = User::create([
+                'name' => 'System User',
+                'email' => 'system@tardesk.com',
+                'password' => bcrypt('password'),
+                'role' => 'call_center',
+                'is_active' => true,
+            ]);
+        }
+
+        return $systemUser->id;
     }
 }
