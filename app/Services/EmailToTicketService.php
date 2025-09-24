@@ -16,6 +16,14 @@ class EmailToTicketService
      */
     public function processIncomingEmail(array $emailData): ?Ticket
     {
+        // Filtro de emails automáticos/no deseados
+        $ignoredEmails = ['noreply@zoho.com'];
+        $ignoredSubjects = ['ZohoMail - New login activity'];
+        if (in_array($emailData['from_email'], $ignoredEmails) || in_array($emailData['subject'], $ignoredSubjects)) {
+            Log::info('Email ignorado por filtro automático', $emailData);
+            return null;
+        }
+
         try {
             $messageId = $emailData['message_id'] ?? null;
             $inReplyTo = $emailData['in_reply_to'] ?? null;
@@ -57,6 +65,14 @@ class EmailToTicketService
      */
     private function findExistingThread(?string $inReplyTo, array $references, string $subject): ?Ticket
     {
+        // Buscar por ticket_number en el subject
+        if (preg_match('/\[TK-(\d{4}-\d{6})\]/', $subject, $matches)) {
+            $ticket = Ticket::where('ticket_number', 'TK-' . $matches[1])->first();
+            if ($ticket) {
+                return $ticket;
+            }
+        }
+
         // 1. Buscar por In-Reply-To header
         if ($inReplyTo) {
             $ticket = Ticket::where('email_message_id', $inReplyTo)->first();
