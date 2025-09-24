@@ -322,16 +322,24 @@ class EmailToTicketService
         $body = preg_replace('/^--\s*$.*/ms', '', $body);
         $body = preg_replace('/^Enviado desde mi .*/m', '', $body);
 
-        // Remover líneas de citado
+        // Remover encabezados de correo y líneas de citado
         $lines = explode("\n", $body);
         $cleanLines = [];
-
         foreach ($lines as $line) {
-            if (!preg_match('/^>\s*/', $line) && !preg_match('/^On .* wrote:/', $line)) {
-                $cleanLines[] = $line;
+            $trimmed = trim($line);
+            if (
+                $trimmed === '' ||
+                preg_match('/^>/',$trimmed) ||
+                preg_match('/^On .* wrote:/i', $trimmed) ||
+                preg_match('/^De:/i', $trimmed) ||
+                preg_match('/^Enviado:/i', $trimmed) ||
+                preg_match('/^Para:/i', $trimmed) ||
+                preg_match('/^Asunto:/i', $trimmed)
+            ) {
+                continue;
             }
+            $cleanLines[] = $line;
         }
-
         return trim(implode("\n", $cleanLines));
     }
 

@@ -56,6 +56,37 @@ class TicketResource extends Resource
                 ->visible(fn ($record) => $record && $record->source === 'email')
                 ->columnSpanFull(),
 
+            // Mostrar detalle de respuestas por email en el thread
+            \Filament\Forms\Components\Placeholder::make('email_thread_replies')
+                ->label('Respuestas por Email en el Thread')
+                ->content(function ($record) {
+                    if (!$record || $record->source !== 'email') {
+                        return null;
+                    }
+                    $replies = $record->replies()->whereNotNull('email_message_id')->orderBy('created_at')->get();
+                    if ($replies->isEmpty()) {
+                        return '<em>No hay respuestas por email en este thread.</em>';
+                    }
+                    $html = '';
+                    foreach ($replies as $reply) {
+                        $author = $reply->user->name ?? 'Cliente';
+                        $fecha = $reply->created_at ? $reply->created_at->format('d/m/Y H:i') : '';
+                        $mensaje = nl2br(e($reply->message));
+                        $adjuntos = '';
+                        if (!empty($reply->attachments)) {
+                            $adjuntos = '<div><strong>Adjuntos:</strong> ' . (is_array($reply->attachments) ? implode(', ', $reply->attachments) : $reply->attachments) . '</div>';
+                        }
+                        $html .= "<div style='margin-bottom:1em;padding:10px;border-left:4px solid #2563eb;background:#f8fafc;border-radius:8px;'>"
+                            . "<div><strong>" . e($author) . "</strong> <span style='color:#6b7280;font-size:13px;'>" . e($fecha) . "</span></div>"
+                            . "<div style='margin-top:8px;'>" . $mensaje . "</div>"
+                            . $adjuntos
+                            . "</div>";
+                    }
+                    return $html;
+                })
+                ->visible(fn ($record) => $record && $record->source === 'email')
+                ->columnSpanFull(),
+
             \Filament\Forms\Components\TextInput::make('reservation_number')
                 ->label('Número de Reservación')
                 ->placeholder('Ej: ABC123, DEF456')
