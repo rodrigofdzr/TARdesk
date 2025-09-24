@@ -174,7 +174,8 @@ class EmailToTicketService
         TicketReply::create([
             'ticket_id' => $ticket->id,
             'user_id' => $user ? $user->id : $ticket->customer->id, // Si no es usuario, usar customer
-            'message' => $this->cleanEmailBody($emailData['body'] ?? $emailData['html_body'] ?? ''),
+            // Usar body_text y body_html correctamente
+            'message' => $this->cleanEmailBody($emailData['body_text'] ?? $emailData['body_html'] ?? ''),
             'type' => 'reply',
             'is_customer_visible' => true,
             'email_message_id' => $emailData['message_id'] ?? null,
