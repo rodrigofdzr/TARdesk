@@ -322,7 +322,14 @@ class EmailToTicketService
         $body = preg_replace('/^--\s*$.*/ms', '', $body);
         $body = preg_replace('/^Enviado desde mi .*/m', '', $body);
 
-        // Remover encabezados de correo y líneas de citado
+        // Eliminar bloques de encabezados de correo (De:, Enviado:, Para:, Asunto:)
+        // Si aparece un bloque de encabezados, cortar el texto ahí
+        $headerBlockPattern = '/(De:.*?Asunto:.*?\n)/is';
+        if (preg_match($headerBlockPattern, $body, $matches, PREG_OFFSET_CAPTURE)) {
+            $body = substr($body, 0, $matches[0][1]);
+        }
+
+        // Eliminar líneas de citado y encabezados individuales
         $lines = explode("\n", $body);
         $cleanLines = [];
         foreach ($lines as $line) {
@@ -330,7 +337,7 @@ class EmailToTicketService
             if (
                 $trimmed === '' ||
                 preg_match('/^>/',$trimmed) ||
-                preg_match('/^On .* wrote:/i', $trimmed) ||
+                preg_match('/^On .*wrote:/i', $trimmed) ||
                 preg_match('/^De:/i', $trimmed) ||
                 preg_match('/^Enviado:/i', $trimmed) ||
                 preg_match('/^Para:/i', $trimmed) ||
