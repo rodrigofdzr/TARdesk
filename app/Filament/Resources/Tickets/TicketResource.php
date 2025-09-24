@@ -234,7 +234,9 @@ class TicketResource extends Resource
                 ->searchable()
                 ->copyable()
                 ->placeholder('Sin reservación')
-                ->icon('heroicon-m-paper-airplane'),
+                ->icon('heroicon-m-paper-airplane')
+                ->limit(12)
+                ->toggleable(isToggledHiddenByDefault: true),
 
             \Filament\Tables\Columns\TextColumn::make('customer.full_name')
                 ->label('Cliente')
@@ -245,19 +247,16 @@ class TicketResource extends Resource
             \Filament\Tables\Columns\TextColumn::make('subject')
                 ->label('Asunto')
                 ->searchable()
-                ->limit(40)
+                ->limit(30)
                 ->tooltip(function (\Filament\Tables\Columns\TextColumn $column): ?string {
                     $state = $column->getState();
-                    return strlen($state) > 40 ? $state : null;
-                })
-                ->description(fn ($record): ?string =>
-                    $record->email_thread_id ? "Thread: {$record->email_thread_id}" : null
-                ),
+                    return strlen($state) > 30 ? $state : null;
+                }),
 
             // Mostrar thread id (si existe) de forma clara en la tabla
             \Filament\Tables\Columns\TextColumn::make('email_thread_id')
                 ->label('Thread ID')
-                ->limit(25)
+                ->limit(15)
                 ->copyable()
                 ->toggleable(isToggledHiddenByDefault: true)
                 ->description(fn ($record): ?string => $record->email_thread_id ? 'Creado desde email' : null),
@@ -271,8 +270,8 @@ class TicketResource extends Resource
                 ->description(function ($record): ?string {
                     $emailReplies = $record->replies()->whereNotNull('email_message_id')->count();
                     return $emailReplies > 0 ? "{$emailReplies} por email" : null;
-                }),
-
+                })
+                ->toggleable(isToggledHiddenByDefault: true),
 
             \Filament\Tables\Columns\TextColumn::make('category')
                 ->label('Categoría')
@@ -340,7 +339,8 @@ class TicketResource extends Resource
                 ->label('Asignado a')
                 ->placeholder('Sin asignar')
                 ->badge()
-                ->color('primary'),
+                ->color('primary')
+                ->toggleable(isToggledHiddenByDefault: true),
 
             // Solo mostrar quién creó el ticket para managers
             \Filament\Tables\Columns\TextColumn::make('createdBy.name')
@@ -348,7 +348,8 @@ class TicketResource extends Resource
                 ->visible($user->role === 'manager')
                 ->description(fn ($record): ?string =>
                     $record->source === 'email' ? 'Desde Email' : null
-                ),
+                )
+                ->toggleable(isToggledHiddenByDefault: true),
 
             \Filament\Tables\Columns\TextColumn::make('created_at')
                 ->label('Fecha Creación')
