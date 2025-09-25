@@ -4,6 +4,7 @@ use App\Services\EmailToTicketService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ZohoWebhookController;
+use App\Http\Controllers\PlantillaController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -22,6 +23,11 @@ Route::middleware([
     Route::get('/email-threading', function () {
         return view('email-threading-dashboard');
     })->name('email.threading.dashboard');
+
+     Route::get('/plantillas', [PlantillaController::class, 'index'])->name('templates.index');
+    Route::get('/plantillas/crear', [PlantillaController::class, 'create'])->name('templates.create');
+    Route::post('/plantillas', [PlantillaController::class, 'store'])->name('templates.store');
+
 });
 
 // Zoho Mail webhook endpoint (public POST) - exempt from CSRF so Zoho's initial verification POST (empty body) returns 200
