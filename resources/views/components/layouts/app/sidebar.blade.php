@@ -14,33 +14,15 @@
             <flux:navlist variant="outline">
                 <flux:navlist.group :heading="__('Platform')" class="grid">
                     <flux:navlist.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>{{ __('Dashboard') }}</flux:navlist.item>
+                        <flux:navlist.item icon="folder" 
+        :href="route('plantillas.index')" 
+        :current="request()->routeIs('plantillas.*')" 
+        wire:navigate>
+        {{ __('Plantillas') }}
                 </flux:navlist.group>
             </flux:navlist>
 
-            <flux:navlist variant="outline">
-    <flux:navlist.group :heading="__('Platform')" class="grid">
-
-        {{-- Dashboard --}}
-        <flux:navlist.item 
-            icon="home" 
-            :href="route('dashboard')" 
-            :current="request()->routeIs('dashboard')" 
-            wire:navigate>
-            {{ __('Dashboard') }}
-        </flux:navlist.item>
-
-        {{-- Plantillas --}}
-        <flux:navlist.item 
-            icon="document-text" 
-            :href="route('plantillas.index')" 
-            :current="request()->routeIs('plantillas.*')" 
-            wire:navigate>
-            {{ __('Plantillas') }}
-        </flux:navlist.item>
-
-    </flux:navlist.group>
-</flux:navlist>
-
+            
 
             <flux:spacer />
 
