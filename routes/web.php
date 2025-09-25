@@ -28,6 +28,6 @@ Route::middleware([
 });
 
 // Zoho Mail webhook endpoint (public POST) - exempt from CSRF so Zoho's initial verification POST (empty body) returns 200
-Route::post(uri: '/webhooks/zoho-mail', [ZohoWebhookController::class, 'handle'])
+Route::post( '/webhooks/zoho-mail', [ZohoWebhookController::class, 'handle'])
     ->name('webhooks.zoho_mail')
     ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class]);
