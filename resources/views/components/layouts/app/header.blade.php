@@ -104,6 +104,13 @@
                 </flux:navlist.group>
             </flux:navlist>
 
+            <flux:navlist.group :heading="__('Gestión')">
+    <flux:navlist.item icon="document-text" :href="route('plantillas.index')" :current="request()->routeIs('plantillas.*')" wire:navigate>
+        {{ __('Plantillas') }}
+    </flux:navlist.item>
+</flux:navlist.group>
+
+
             <flux:spacer />
 
             <flux:navlist variant="outline">
