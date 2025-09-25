@@ -4,6 +4,8 @@ use App\Services\EmailToTicketService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ZohoWebhookController;
+use App\Http\Controllers\PlantillaController;
+
 
 Route::get('/', function () {
     return view('welcome');
