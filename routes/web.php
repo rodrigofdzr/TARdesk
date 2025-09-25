@@ -22,9 +22,12 @@ Route::middleware([
     Route::get('/email-threading', function () {
         return view('email-threading-dashboard');
     })->name('email.threading.dashboard');
+
+    Route::resource('plantillas', PlantillaController::class);
+
 });
 
 // Zoho Mail webhook endpoint (public POST) - exempt from CSRF so Zoho's initial verification POST (empty body) returns 200
-Route::post('/webhooks/zoho-mail', [ZohoWebhookController::class, 'handle'])
+Route::post(uri: '/webhooks/zoho-mail', [ZohoWebhookController::class, 'handle'])
     ->name('webhooks.zoho_mail')
     ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class]);
