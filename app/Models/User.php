@@ -8,6 +8,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class User extends Authenticatable
 {
@@ -24,7 +25,6 @@ class User extends Authenticatable
         'email',
         'password',
         'role',
-        'department',
         'is_active',
     ];
 
@@ -68,6 +68,11 @@ class User extends Authenticatable
         return $this->hasMany(TicketReply::class);
     }
 
+    public function agent(): HasOne
+    {
+        return $this->hasOne(Agent::class);
+    }
+
     // Métodos de roles
     public function isManager(): bool
     {
@@ -99,6 +104,26 @@ class User extends Authenticatable
         return $this->is_active;
     }
 
+    public function hasRole(string $role): bool
+    {
+        return $this->role === $role;
+    }
+
+    public function hasAnyRole(array $roles): bool
+    {
+        return in_array($this->role, $roles);
+    }
+
+    public function canAccessAdmin(): bool
+    {
+        return $this->role === 'manager';
+    }
+
+    public function canManageTickets(): bool
+    {
+        return in_array($this->role, ['manager', 'customer_service', 'call_center']);
+    }
+
     // Scopes
     public function scopeActive($query)
     {
@@ -108,6 +133,12 @@ class User extends Authenticatable
     public function scopeByRole($query, $role)
     {
         return $query->where('role', $role);
+    }
+
+    // Scope para agentes
+    public function scopeAgents($query)
+    {
+        return $query->where('role', 'agent');
     }
 
     /**

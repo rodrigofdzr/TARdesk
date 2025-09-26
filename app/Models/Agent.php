@@ -4,10 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Agent extends Model
 {
     protected $fillable = [
+        'user_id',
         'name',
         'email',
         'phone',
@@ -31,6 +33,11 @@ class Agent extends Model
     public function tickets(): HasMany
     {
         return $this->hasMany(Ticket::class, 'assigned_to');
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
 
     public function scopeActive($query)

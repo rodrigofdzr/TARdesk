@@ -36,6 +36,39 @@ class AgentResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
+            Select::make('user_id')
+                ->label('Usuario Vinculado')
+                ->relationship('user', 'name')
+                ->searchable()
+                ->preload()
+                ->createOptionForm([
+                    TextInput::make('name')
+                        ->label('Nombre')
+                        ->required(),
+                    TextInput::make('email')
+                        ->label('Email')
+                        ->email()
+                        ->required()
+                        ->unique(ignoreRecord: true),
+                    Select::make('role')
+                        ->label('Rol')
+                        ->options([
+                            'admin' => 'Administrador',
+                            'manager' => 'Manager',
+                            'agent' => 'Agente',
+                            'customer_service' => 'Servicio al Cliente',
+                            'call_center' => 'Call Center',
+                        ])
+                        ->default('agent')
+                        ->required(),
+                    TextInput::make('password')
+                        ->label('Contraseña')
+                        ->password()
+                        ->required()
+                        ->minLength(8),
+                ])
+                ->helperText('Selecciona un usuario existente o crea uno nuevo para vincular con este agente'),
+
             TextInput::make('name')
                 ->label('Nombre')
                 ->required()
@@ -102,6 +135,14 @@ class AgentResource extends Resource
                     ->label('Avatar')
                     ->circular()
                     ->defaultImageUrl(fn (): string => 'https://ui-avatars.com/api/?name=' . urlencode('Agent') . '&color=7F9CF5&background=EBF4FF'),
+
+                TextColumn::make('user.name')
+                    ->label('Usuario')
+                    ->searchable()
+                    ->sortable()
+                    ->badge()
+                    ->color('primary')
+                    ->formatStateUsing(fn ($state, $record) => $record->user ? $record->user->name . ' (' . $record->user->role . ')' : 'Sin usuario'),
 
                 TextColumn::make('name')
                     ->label('Nombre')
