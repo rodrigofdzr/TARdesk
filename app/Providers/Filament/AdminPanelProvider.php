@@ -54,7 +54,7 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->authMiddleware([
                 Authenticate::class,
-                \App\Http\Middleware\RoleMiddleware::class . ':manager',
+                \App\Http\Middleware\RoleMiddleware::class . ':manager,customer_service,call_center',
             ])
             ->authGuard('web');
     }
