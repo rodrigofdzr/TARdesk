@@ -8,7 +8,6 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class User extends Authenticatable
 {
@@ -66,11 +65,6 @@ class User extends Authenticatable
     public function ticketReplies(): HasMany
     {
         return $this->hasMany(TicketReply::class);
-    }
-
-    public function agent(): HasOne
-    {
-        return $this->hasOne(Agent::class);
     }
 
     // Métodos de roles
@@ -135,10 +129,10 @@ class User extends Authenticatable
         return $query->where('role', $role);
     }
 
-    // Scope para agentes
+    // Scope para todos los tipos de agentes/usuarios internos
     public function scopeAgents($query)
     {
-        return $query->where('role', 'agent');
+        return $query->whereIn('role', ['manager', 'customer_service', 'call_center']);
     }
 
     /**
