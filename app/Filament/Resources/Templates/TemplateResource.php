@@ -105,21 +105,7 @@ class TemplateResource extends Resource
 
             Placeholder::make('variables_help')
                 ->label('Ayuda sobre Variables')
-                ->content('
-                    <div class="text-sm text-gray-600">
-                        <p><strong>Variables comunes:</strong></p>
-                        <ul class="list-disc list-inside">
-                            <li>{{customer_name}} - Nombre del cliente</li>
-                            <li>{{customer_email}} - Email del cliente</li>
-                            <li>{{ticket_number}} - Número del ticket</li>
-                            <li>{{ticket_subject}} - Asunto del ticket</li>
-                            <li>{{agent_name}} - Nombre del agente</li>
-                            <li>{{company_name}} - Nombre de la empresa</li>
-                            <li>{{date}} - Fecha actual</li>
-                            <li>{{time}} - Hora actual</li>
-                        </ul>
-                    </div>
-                '),
+                ->content("Variables comunes:\n- {{customer_name}}: Nombre del cliente\n- {{customer_email}}: Email del cliente\n- {{ticket_number}}: Número del ticket\n- {{ticket_subject}}: Asunto del ticket\n- {{agent_name}}: Nombre del agente\n- {{company_name}}: Nombre de la empresa\n- {{date}}: Fecha actual\n- {{time}}: Hora actual"),
 
             Toggle::make('is_active')
                 ->label('Plantilla Activa')
