@@ -15,7 +15,6 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Components\FileUpload;
-use Filament\Forms\Components\Section;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\BadgeColumn;
 use Filament\Tables\Columns\BooleanColumn;
@@ -37,70 +36,61 @@ class AgentResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
-            Section::make('Información Personal')
-                ->schema([
-                    TextInput::make('name')
-                        ->label('Nombre')
-                        ->required()
-                        ->maxLength(255),
+            TextInput::make('name')
+                ->label('Nombre')
+                ->required()
+                ->maxLength(255),
 
-                    TextInput::make('email')
-                        ->label('Email')
-                        ->email()
-                        ->required()
-                        ->unique(ignoreRecord: true)
-                        ->maxLength(255),
+            TextInput::make('email')
+                ->label('Email')
+                ->email()
+                ->required()
+                ->unique(ignoreRecord: true)
+                ->maxLength(255),
 
-                    TextInput::make('phone')
-                        ->label('Teléfono')
-                        ->tel()
-                        ->maxLength(255),
+            TextInput::make('phone')
+                ->label('Teléfono')
+                ->tel()
+                ->maxLength(255),
 
-                    FileUpload::make('avatar')
-                        ->label('Avatar')
-                        ->image()
-                        ->directory('agents/avatars')
-                        ->visibility('public'),
+            FileUpload::make('avatar')
+                ->label('Avatar')
+                ->image()
+                ->directory('agents/avatars')
+                ->visibility('public'),
 
-                    Textarea::make('bio')
-                        ->label('Biografía')
-                        ->rows(3),
-                ]),
+            Textarea::make('bio')
+                ->label('Biografía')
+                ->rows(3),
 
-            Section::make('Información Laboral')
-                ->schema([
-                    TextInput::make('department')
-                        ->label('Departamento')
-                        ->maxLength(255),
+            TextInput::make('department')
+                ->label('Departamento')
+                ->maxLength(255),
 
-                    Select::make('status')
-                        ->label('Estado')
-                        ->options([
-                            'active' => 'Activo',
-                            'inactive' => 'Inactivo',
-                            'on_break' => 'En Descanso',
-                        ])
-                        ->default('active')
-                        ->required(),
+            Select::make('status')
+                ->label('Estado')
+                ->options([
+                    'active' => 'Activo',
+                    'inactive' => 'Inactivo',
+                    'on_break' => 'En Descanso',
+                ])
+                ->default('active')
+                ->required(),
 
-                    TextInput::make('max_concurrent_tickets')
-                        ->label('Máximo de Tickets Simultáneos')
-                        ->numeric()
-                        ->default(10)
-                        ->minValue(1)
-                        ->maxValue(50),
-                ]),
+            TextInput::make('max_concurrent_tickets')
+                ->label('Máximo de Tickets Simultáneos')
+                ->numeric()
+                ->default(10)
+                ->minValue(1)
+                ->maxValue(50),
 
-            Section::make('Permisos')
-                ->schema([
-                    Toggle::make('can_reassign_tickets')
-                        ->label('Puede Reasignar Tickets')
-                        ->default(false),
+            Toggle::make('can_reassign_tickets')
+                ->label('Puede Reasignar Tickets')
+                ->default(false),
 
-                    Toggle::make('can_close_tickets')
-                        ->label('Puede Cerrar Tickets')
-                        ->default(true),
-                ]),
+            Toggle::make('can_close_tickets')
+                ->label('Puede Cerrar Tickets')
+                ->default(true),
         ]);
     }
 

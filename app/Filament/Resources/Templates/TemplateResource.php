@@ -14,7 +14,6 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\Toggle;
-use Filament\Forms\Components\Group;
 use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\Placeholder;
@@ -39,117 +38,105 @@ class TemplateResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
-            Group::make()
-                ->schema([
-                    TextInput::make('name')
-                        ->label('Nombre')
-                        ->required()
-                        ->maxLength(255)
-                        ->placeholder('Ej: Respuesta de Bienvenida'),
+            TextInput::make('name')
+                ->label('Nombre')
+                ->required()
+                ->maxLength(255)
+                ->placeholder('Ej: Respuesta de Bienvenida'),
 
-                    Select::make('type')
-                        ->label('Tipo')
-                        ->options([
-                            'response' => 'Respuesta',
-                            'ticket_creation' => 'Creación de Ticket',
-                            'closing' => 'Cierre',
-                            'escalation' => 'Escalación',
-                            'custom' => 'Personalizada',
-                        ])
-                        ->default('custom')
-                        ->required(),
+            Select::make('type')
+                ->label('Tipo')
+                ->options([
+                    'response' => 'Respuesta',
+                    'ticket_creation' => 'Creación de Ticket',
+                    'closing' => 'Cierre',
+                    'escalation' => 'Escalación',
+                    'custom' => 'Personalizada',
+                ])
+                ->default('custom')
+                ->required(),
 
-                    TextInput::make('category')
-                        ->label('Categoría')
-                        ->maxLength(255)
-                        ->placeholder('Ej: Soporte Técnico, Ventas, etc.'),
+            TextInput::make('category')
+                ->label('Categoría')
+                ->maxLength(255)
+                ->placeholder('Ej: Soporte Técnico, Ventas, etc.'),
 
-                    Textarea::make('description')
-                        ->label('Descripción')
-                        ->rows(2)
-                        ->placeholder('Breve descripción de cuándo usar esta plantilla'),
+            Textarea::make('description')
+                ->label('Descripción')
+                ->rows(2)
+                ->placeholder('Breve descripción de cuándo usar esta plantilla'),
+
+            TextInput::make('subject')
+                ->label('Asunto')
+                ->maxLength(255)
+                ->placeholder('Asunto del email (opcional)')
+                ->helperText('Puedes usar variables como {{ticket_number}}, {{customer_name}}, etc.'),
+
+            RichEditor::make('content')
+                ->label('Contenido')
+                ->required()
+                ->placeholder('Contenido de la plantilla...')
+                ->helperText('Puedes usar variables como {{customer_name}}, {{ticket_number}}, {{agent_name}}, etc.')
+                ->toolbarButtons([
+                    'bold',
+                    'italic',
+                    'underline',
+                    'bulletList',
+                    'orderedList',
+                    'link',
+                    'undo',
+                    'redo',
                 ]),
 
-            Group::make()
-                ->schema([
-                    TextInput::make('subject')
-                        ->label('Asunto')
-                        ->maxLength(255)
-                        ->placeholder('Asunto del email (opcional)')
-                        ->helperText('Puedes usar variables como {{ticket_number}}, {{customer_name}}, etc.'),
-
-                    RichEditor::make('content')
-                        ->label('Contenido')
-                        ->required()
-                        ->placeholder('Contenido de la plantilla...')
-                        ->helperText('Puedes usar variables como {{customer_name}}, {{ticket_number}}, {{agent_name}}, etc.')
-                        ->toolbarButtons([
-                            'bold',
-                            'italic',
-                            'underline',
-                            'bulletList',
-                            'orderedList',
-                            'link',
-                            'undo',
-                            'redo',
-                        ]),
+            TagsInput::make('variables')
+                ->label('Variables Disponibles')
+                ->placeholder('Agrega variables como: customer_name, ticket_number, etc.')
+                ->helperText('Variables que se pueden usar en el contenido. Se reemplazarán automáticamente.')
+                ->suggestions([
+                    'customer_name',
+                    'customer_email',
+                    'ticket_number',
+                    'ticket_subject',
+                    'agent_name',
+                    'company_name',
+                    'date',
+                    'time',
                 ]),
 
-            Group::make()
-                ->schema([
-                    TagsInput::make('variables')
-                        ->label('Variables Disponibles')
-                        ->placeholder('Agrega variables como: customer_name, ticket_number, etc.')
-                        ->helperText('Variables que se pueden usar en el contenido. Se reemplazarán automáticamente.')
-                        ->suggestions([
-                            'customer_name',
-                            'customer_email',
-                            'ticket_number',
-                            'ticket_subject',
-                            'agent_name',
-                            'company_name',
-                            'date',
-                            'time',
-                        ]),
+            Placeholder::make('variables_help')
+                ->label('Ayuda sobre Variables')
+                ->content('
+                    <div class="text-sm text-gray-600">
+                        <p><strong>Variables comunes:</strong></p>
+                        <ul class="list-disc list-inside">
+                            <li>{{customer_name}} - Nombre del cliente</li>
+                            <li>{{customer_email}} - Email del cliente</li>
+                            <li>{{ticket_number}} - Número del ticket</li>
+                            <li>{{ticket_subject}} - Asunto del ticket</li>
+                            <li>{{agent_name}} - Nombre del agente</li>
+                            <li>{{company_name}} - Nombre de la empresa</li>
+                            <li>{{date}} - Fecha actual</li>
+                            <li>{{time}} - Hora actual</li>
+                        </ul>
+                    </div>
+                '),
 
-                    Placeholder::make('variables_help')
-                        ->label('Ayuda sobre Variables')
-                        ->content('
-                            <div class="text-sm text-gray-600">
-                                <p><strong>Variables comunes:</strong></p>
-                                <ul class="list-disc list-inside">
-                                    <li>{{customer_name}} - Nombre del cliente</li>
-                                    <li>{{customer_email}} - Email del cliente</li>
-                                    <li>{{ticket_number}} - Número del ticket</li>
-                                    <li>{{ticket_subject}} - Asunto del ticket</li>
-                                    <li>{{agent_name}} - Nombre del agente</li>
-                                    <li>{{company_name}} - Nombre de la empresa</li>
-                                    <li>{{date}} - Fecha actual</li>
-                                    <li>{{time}} - Hora actual</li>
-                                </ul>
-                            </div>
-                        '),
-                ]),
+            Toggle::make('is_active')
+                ->label('Plantilla Activa')
+                ->default(true)
+                ->helperText('Solo las plantillas activas aparecerán en los selectores'),
 
-            Group::make()
-                ->schema([
-                    Toggle::make('is_active')
-                        ->label('Plantilla Activa')
-                        ->default(true)
-                        ->helperText('Solo las plantillas activas aparecerán en los selectores'),
+            Toggle::make('is_default')
+                ->label('Plantilla por Defecto')
+                ->default(false)
+                ->helperText('Se seleccionará automáticamente para este tipo'),
 
-                    Toggle::make('is_default')
-                        ->label('Plantilla por Defecto')
-                        ->default(false)
-                        ->helperText('Se seleccionará automáticamente para este tipo'),
-
-                    Select::make('created_by')
-                        ->label('Creado por')
-                        ->relationship('creator', 'name')
-                        ->default(auth()->id())
-                        ->disabled()
-                        ->dehydrated(true),
-                ]),
+            Select::make('created_by')
+                ->label('Creado por')
+                ->relationship('creator', 'name')
+                ->default(auth()->id())
+                ->disabled()
+                ->dehydrated(true),
         ]);
     }
 
