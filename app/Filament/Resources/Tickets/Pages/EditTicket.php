@@ -20,10 +20,11 @@ class EditTicket extends EditRecord
                 ->label('Responder')
                 ->visible(fn () => in_array(auth()->user()->role, ['manager', 'customer_service', 'call_center']))
                 ->form([
-                    Forms\Components\Textarea::make('message')
+                    Forms\Components\MarkdownEditor::make('message')
                         ->label('Mensaje')
                         ->required()
-                        ->rows(6),
+                        ->rows(8)
+                        ->helperText('Así verá el cliente el mensaje. Puedes editarlo antes de enviar.'),
 
                     Forms\Components\Select::make('type')
                         ->label('Tipo')
@@ -67,14 +68,27 @@ class EditTicket extends EditRecord
                 ])
                 ->modalWidth('lg') // ✅ en lugar de 'lg'
                 ->action(function (array $data): void {
+                    $ticket = $this->record;
+                    $user = auth()->user();
+                    $customer = $ticket->customer;
+                    $variables = [
+                        '{{customer_name}}' => $customer->name ?? '',
+                        '{{customer_email}}' => $customer->email ?? '',
+                        '{{ticket_number}}' => $ticket->id,
+                        '{{ticket_subject}}' => $ticket->subject ?? '',
+                        '{{agent_name}}' => $user->name ?? '',
+                        '{{company_name}}' => config('app.name'),
+                        '{{date}}' => now()->format('d/m/Y'),
+                        '{{time}}' => now()->format('H:i'),
+                    ];
+                    $message = strtr($data['message'], $variables);
                     $this->record->replies()->create([
-                        'user_id' => auth()->id(),
-                        'message' => $data['message'],
+                        'user_id' => $user->id,
+                        'message' => $message,
                         'type' => $data['type'] ?? 'reply',
                         'is_customer_visible' => $data['is_customer_visible'] ?? true,
                         'attachments' => $data['attachments'] ?? null,
                     ]);
-
                     Notification::make()
                         ->title('Respuesta creada y enviada si corresponde.')
                         ->success()
