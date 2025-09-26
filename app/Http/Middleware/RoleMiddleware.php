@@ -16,14 +16,14 @@ class RoleMiddleware
     public function handle(Request $request, Closure $next, string ...$roles): Response
     {
         if (!auth()->check()) {
-            return redirect()->route('login');
+            return redirect()->route('filament.admin.auth.login');
         }
 
         $user = auth()->user();
 
         if (!$user->is_active) {
             auth()->logout();
-            return redirect()->route('login')->with('error', 'Tu cuenta está desactivada. Contacta al administrador.');
+            return redirect()->route('filament.admin.auth.login')->with('error', 'Tu cuenta está desactivada. Contacta al administrador.');
         }
 
         if (!empty($roles) && !$user->hasAnyRole($roles)) {

@@ -54,14 +54,9 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->authMiddleware([
                 Authenticate::class,
+                \App\Http\Middleware\RoleMiddleware::class . ':manager',
             ])
             ->authGuard('web')
-            ->authPasswordBroker('users')
-            ->viteTheme('resources/css/filament/admin/theme.css')
-            // Restringir acceso solo a managers
-            ->authGuard('web')
-            ->middleware([
-                \App\Http\Middleware\RoleMiddleware::class . ':manager',
-            ], isPersistent: true);
+            ->viteTheme('resources/css/filament/admin/theme.css');
     }
 }
