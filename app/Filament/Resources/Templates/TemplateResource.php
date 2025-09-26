@@ -14,7 +14,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\Toggle;
-use Filament\Forms\Components\Section;
+use Filament\Forms\Components\Group;
 use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\Placeholder;
@@ -23,8 +23,8 @@ use Filament\Tables\Columns\BadgeColumn;
 use Filament\Tables\Columns\BooleanColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
-use Filament\Tables\Actions\Action;
-use Filament\Tables\Actions\BulkActionGroup;
+use Filament\Tables\Actions\ViewAction;
+use Filament\Tables\Actions\EditAction;
 use Filament\Tables\Actions\DeleteBulkAction;
 
 class TemplateResource extends Resource
@@ -42,7 +42,7 @@ class TemplateResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
-            Section::make('Información Básica')
+            Group::make()
                 ->schema([
                     TextInput::make('name')
                         ->label('Nombre')
@@ -73,7 +73,7 @@ class TemplateResource extends Resource
                         ->placeholder('Breve descripción de cuándo usar esta plantilla'),
                 ]),
 
-            Section::make('Contenido del Mensaje')
+            Group::make()
                 ->schema([
                     TextInput::make('subject')
                         ->label('Asunto')
@@ -98,7 +98,7 @@ class TemplateResource extends Resource
                         ]),
                 ]),
 
-            Section::make('Variables y Configuración')
+            Group::make()
                 ->schema([
                     TagsInput::make('variables')
                         ->label('Variables Disponibles')
@@ -134,7 +134,7 @@ class TemplateResource extends Resource
                         '),
                 ]),
 
-            Section::make('Estado y Permisos')
+            Group::make()
                 ->schema([
                     Toggle::make('is_active')
                         ->label('Plantilla Activa')
@@ -257,7 +257,7 @@ class TemplateResource extends Resource
                     ->falseLabel('Solo no por defecto'),
             ])
             ->actions([
-                Action::make('view')
+                ViewAction::make()
                     ->label('Ver')
                     ->icon('heroicon-o-eye')
                     ->modalHeading(fn (Template $record): string => $record->name)
@@ -267,15 +267,13 @@ class TemplateResource extends Resource
                     ))
                     ->modalSubmitAction(false)
                     ->modalCancelActionLabel('Cerrar'),
-                Action::make('edit')
+                EditAction::make()
                     ->label('Editar')
                     ->icon('heroicon-o-pencil')
                     ->url(fn (Template $record): string => static::getUrl('edit', ['record' => $record])),
             ])
             ->bulkActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                ]),
+                DeleteBulkAction::make(),
             ]);
     }
 
