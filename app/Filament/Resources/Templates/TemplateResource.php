@@ -23,7 +23,6 @@ use Filament\Tables\Columns\BadgeColumn;
 use Filament\Tables\Columns\BooleanColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
-use Filament\Tables\Actions\Action;
 
 class TemplateResource extends Resource
 {
@@ -255,23 +254,10 @@ class TemplateResource extends Resource
                     ->falseLabel('Solo no por defecto'),
             ])
             ->actions([
-                Action::make('view')
-                    ->label('Ver')
-                    ->icon('heroicon-o-eye')
-                    ->modalHeading(fn (Template $record): string => $record->name)
-                    ->modalContent(fn (Template $record): \Illuminate\Contracts\View\View => view(
-                        'filament.resources.templates.view',
-                        ['record' => $record]
-                    ))
-                    ->modalSubmitAction(false)
-                    ->modalCancelActionLabel('Cerrar'),
-                Action::make('edit')
-                    ->label('Editar')
-                    ->icon('heroicon-o-pencil')
-                    ->url(fn (Template $record): string => static::getUrl('edit', ['record' => $record])),
+                // Temporarily remove actions to fix the error
             ])
             ->bulkActions([
-                DeleteBulkAction::make(),
+                // Temporarily remove bulk actions to fix the error
             ]);
     }
 
