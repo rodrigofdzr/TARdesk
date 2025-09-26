@@ -49,6 +49,21 @@ class EditTicket extends EditRecord
                         ->visibility('public')
                         ->preserveFilenames(false)
                         ->visible(fn (callable $get) => $get('type') !== 'system'),
+
+                    Forms\Components\Select::make('template_id')
+                        ->label('Plantilla')
+                        ->options(fn () => \App\Models\Template::query()->pluck('name', 'id')->toArray())
+                        ->searchable()
+                        ->reactive()
+                        ->afterStateUpdated(function ($state, callable $set) {
+                            if ($state) {
+                                $template = \App\Models\Template::find($state);
+                                if ($template) {
+                                    $set('message', $template->content);
+                                }
+                            }
+                        })
+                        ->helperText('Selecciona una plantilla para autocompletar el mensaje.'),
                 ])
                 ->modalWidth('lg') // ✅ en lugar de 'lg'
                 ->action(function (array $data): void {
