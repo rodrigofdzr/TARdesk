@@ -112,11 +112,11 @@ class UserResource extends Resource
                     ->label('Activo')
                     ->sortable(),
 
-                TextColumn::make('assignedTickets')
-                    ->label('Tickets Asignados')
-                    ->counts('assignedTickets')
-                    ->badge()
-                    ->color('primary'),
+                // TextColumn::make('assignedTickets')
+                //     ->label('Tickets Asignados')
+                //     ->counts('assignedTickets')
+                //     ->badge()
+                //     ->color('primary'),
 
                 TextColumn::make('created_at')
                     ->label('Creado')
