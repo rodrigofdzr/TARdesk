@@ -25,6 +25,9 @@ class EmailToTicketService
         }
 
         try {
+            // Guardar el payload del email recibido para depuración
+            $payloadPath = storage_path('logs/email_payload_' . date('Ymd_His') . '.json');
+            file_put_contents($payloadPath, json_encode($emailData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
             $messageId = $emailData['message_id'] ?? null;
             $inReplyTo = $emailData['in_reply_to'] ?? null;
             $references = $emailData['references'] ?? [];
