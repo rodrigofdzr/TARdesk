@@ -134,6 +134,7 @@ class EmailToTicketService
         // Generar thread ID único para este email
         $threadId = 'email_' . Str::uuid();
 
+        $attachments = $this->processAndStoreAttachments($emailData['attachments'] ?? []);
         $ticket = Ticket::create([
             'customer_id' => $customer->id,
             'created_by' => $this->getSystemUserId(),
@@ -148,7 +149,7 @@ class EmailToTicketService
             'email_thread_id' => $threadId,
             'metadata' => [
                 'original_email' => $emailData,
-                'attachments' => $emailData['attachments'] ?? []
+                'attachments' => $attachments
             ]
         ]);
 
@@ -179,6 +180,7 @@ class EmailToTicketService
             ]);
             return $ticket;
         }
+        $attachments = $this->processAndStoreAttachments($emailData['attachments'] ?? []);
         TicketReply::create([
             'ticket_id' => $ticket->id,
             'user_id' => $user ? $user->id : $ticket->customer->id,
@@ -186,7 +188,7 @@ class EmailToTicketService
             'type' => 'reply',
             'is_customer_visible' => true,
             'email_message_id' => $emailData['message_id'] ?? null,
-            'attachments' => $emailData['attachments'] ?? []
+            'attachments' => $attachments
         ]);
 
         // Si es del cliente y el ticket estaba cerrado, reabrirlo
@@ -201,6 +203,33 @@ class EmailToTicketService
         ]);
 
         return $ticket;
+    }
+
+    /**
+     * Procesa y guarda los adjuntos recibidos en el emailData['attachments']
+     * Espera que cada adjunto tenga: filename, content (base64), mime/type
+     * Devuelve un array con la info de los archivos guardados
+     */
+    private function processAndStoreAttachments(array $attachments): array
+    {
+        $saved = [];
+        foreach ($attachments as $attachment) {
+            if (!isset($attachment['filename'], $attachment['content'])) {
+                continue;
+            }
+            $filename = uniqid() . '_' . preg_replace('/[^a-zA-Z0-9._-]/', '_', $attachment['filename']);
+            $path = 'ticket_attachments/' . $filename;
+            $content = base64_decode($attachment['content']);
+            \Storage::disk('public')->put($path, $content);
+            $saved[] = [
+                'filename' => $attachment['filename'],
+                'stored_as' => $filename,
+                'path' => $path,
+                'mime' => $attachment['mime'] ?? null,
+                'size' => strlen($content),
+            ];
+        }
+        return $saved;
     }
 
     /**
