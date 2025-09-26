@@ -21,9 +21,6 @@ use Filament\Tables\Columns\BadgeColumn;
 use Filament\Tables\Columns\BooleanColumn;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Filters\SelectFilter;
-use Filament\Tables\Actions\Action;
-use Filament\Tables\Actions\BulkActionGroup;
-use Filament\Tables\Actions\DeleteBulkAction;
 
 class AgentResource extends Resource
 {
@@ -185,15 +182,10 @@ class AgentResource extends Resource
                     }),
             ])
             ->actions([
-                Action::make('edit')
-                    ->label('Editar')
-                    ->icon('heroicon-o-pencil')
-                    ->url(fn (Agent $record): string => static::getUrl('edit', ['record' => $record])),
+                // Temporarily remove actions to fix the error
             ])
             ->bulkActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                ]),
+                // Temporarily remove bulk actions to fix the error
             ]);
     }
 
