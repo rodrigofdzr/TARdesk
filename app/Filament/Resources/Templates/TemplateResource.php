@@ -23,7 +23,8 @@ use Filament\Tables\Columns\BadgeColumn;
 use Filament\Tables\Columns\BooleanColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
-use Filament\Tables\Actions\Action;
+use Filament\Tables\Actions\ViewAction;
+use Filament\Tables\Actions\EditAction;
 
 class TemplateResource extends Resource
 {
@@ -255,7 +256,7 @@ class TemplateResource extends Resource
                     ->falseLabel('Solo no por defecto'),
             ])
             ->actions([
-                Action::make('view')
+                ViewAction::make()
                     ->label('Ver')
                     ->icon('heroicon-o-eye')
                     ->modalHeading(fn (Template $record): string => $record->name)
@@ -265,7 +266,7 @@ class TemplateResource extends Resource
                     ))
                     ->modalSubmitAction(false)
                     ->modalCancelActionLabel('Cerrar'),
-                Action::make('edit')
+                EditAction::make()
                     ->label('Editar')
                     ->icon('heroicon-o-pencil')
                     ->url(fn (Template $record): string => static::getUrl('edit', ['record' => $record])),
