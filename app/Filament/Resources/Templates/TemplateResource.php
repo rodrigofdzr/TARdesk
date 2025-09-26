@@ -23,9 +23,9 @@ use Filament\Tables\Columns\BadgeColumn;
 use Filament\Tables\Columns\BooleanColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
-use Filament\Tables\Actions\EditAction;
+use Filament\Tables\Actions\Action;
+use Filament\Tables\Actions\BulkActionGroup;
 use Filament\Tables\Actions\DeleteBulkAction;
-use Filament\Tables\Actions\ViewAction;
 
 class TemplateResource extends Resource
 {
@@ -257,11 +257,25 @@ class TemplateResource extends Resource
                     ->falseLabel('Solo no por defecto'),
             ])
             ->actions([
-                ViewAction::make(),
-                EditAction::make(),
+                Action::make('view')
+                    ->label('Ver')
+                    ->icon('heroicon-o-eye')
+                    ->modalHeading(fn (Template $record): string => $record->name)
+                    ->modalContent(fn (Template $record): \Illuminate\Contracts\View\View => view(
+                        'filament.resources.templates.view',
+                        ['record' => $record]
+                    ))
+                    ->modalSubmitAction(false)
+                    ->modalCancelActionLabel('Cerrar'),
+                Action::make('edit')
+                    ->label('Editar')
+                    ->icon('heroicon-o-pencil')
+                    ->url(fn (Template $record): string => static::getUrl('edit', ['record' => $record])),
             ])
             ->bulkActions([
-                DeleteBulkAction::make(),
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
+                ]),
             ]);
     }
 
