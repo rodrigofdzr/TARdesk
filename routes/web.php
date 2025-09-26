@@ -11,7 +11,7 @@ Route::get('/', function () {
 
 // Dashboard de Email Threading para usuarios autenticados
 Route::middleware([
-    'auth:sanctum',
+    'auth',
     config('jetstream.auth_session'),
     'verified',
 ])->group(function () {
@@ -26,7 +26,7 @@ Route::middleware([
 
 // Rutas para agentes - Plataforma interna de servicio al cliente
 Route::middleware([
-    'auth:sanctum',
+    'auth',
     config('jetstream.auth_session'),
     'verified',
     'role:manager,customer_service,call_center'
