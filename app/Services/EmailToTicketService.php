@@ -25,6 +25,12 @@ class EmailToTicketService
         }
 
         try {
+            Log::info('Procesando email entrante', [
+                'from_email' => $emailData['from_email'] ?? null,
+                'subject' => $emailData['subject'] ?? null,
+                'message_id' => $emailData['message_id'] ?? null,
+                'attachments_count' => isset($emailData['attachments']) ? count($emailData['attachments']) : 0
+            ]);
             // Guardar el payload del email recibido para depuración
             $payloadPath = storage_path('logs/email_payload_' . date('Ymd_His') . '.json');
             file_put_contents($payloadPath, json_encode($emailData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
@@ -138,10 +144,14 @@ class EmailToTicketService
         $threadId = 'email_' . Str::uuid();
 
         $attachments = $emailData['attachments'] ?? [];
+        Log::info('Adjuntos recibidos en webhook', ['count' => count($attachments), 'message_id' => $emailData['message_id'] ?? null]);
         if (empty($attachments) && !empty($emailData['message_id'])) {
+            Log::info('Intentando descargar adjuntos desde Zoho API', ['message_id' => $emailData['message_id']]);
             $attachments = $this->fetchAttachmentsFromZohoApi($emailData['message_id']);
+            Log::info('Adjuntos descargados desde Zoho API', ['count' => count($attachments)]);
         }
         $attachments = $this->processAndStoreAttachments($attachments);
+        Log::info('Adjuntos procesados y guardados', ['count' => count($attachments), 'ticket_attachments' => $attachments]);
         $ticket = Ticket::create([
             'customer_id' => $customer->id,
             'created_by' => $this->getSystemUserId(),
@@ -188,10 +198,14 @@ class EmailToTicketService
             return $ticket;
         }
         $attachments = $emailData['attachments'] ?? [];
+        Log::info('Adjuntos recibidos en webhook (reply)', ['count' => count($attachments), 'message_id' => $emailData['message_id'] ?? null]);
         if (empty($attachments) && !empty($emailData['message_id'])) {
+            Log::info('Intentando descargar adjuntos desde Zoho API (reply)', ['message_id' => $emailData['message_id']]);
             $attachments = $this->fetchAttachmentsFromZohoApi($emailData['message_id']);
+            Log::info('Adjuntos descargados desde Zoho API (reply)', ['count' => count($attachments)]);
         }
         $attachments = $this->processAndStoreAttachments($attachments);
+        Log::info('Adjuntos procesados y guardados (reply)', ['count' => count($attachments), 'ticket_attachments' => $attachments]);
         TicketReply::create([
             'ticket_id' => $ticket->id,
             'user_id' => $user ? $user->id : $ticket->customer->id,
@@ -226,12 +240,19 @@ class EmailToTicketService
         $saved = [];
         foreach ($attachments as $attachment) {
             if (!isset($attachment['filename'], $attachment['content'])) {
+                Log::warning('Adjunto inválido, faltan campos', ['attachment' => $attachment]);
                 continue;
             }
             $filename = uniqid() . '_' . preg_replace('/[^a-zA-Z0-9._-]/', '_', $attachment['filename']);
             $path = 'ticket_attachments/' . $filename;
             $content = base64_decode($attachment['content']);
-            \Storage::disk('public')->put($path, $content);
+            try {
+                \Storage::disk('public')->put($path, $content);
+                Log::info('Adjunto guardado en storage', ['filename' => $filename, 'path' => $path, 'size' => strlen($content)]);
+            } catch (\Exception $e) {
+                Log::error('Error guardando adjunto en storage', ['filename' => $filename, 'error' => $e->getMessage()]);
+                continue;
+            }
             $saved[] = [
                 'filename' => $attachment['filename'],
                 'stored_as' => $filename,
