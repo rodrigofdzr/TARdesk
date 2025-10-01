@@ -498,6 +498,7 @@ class EmailToTicketService
         $apiBase = $config['api_base'] ?? 'https://mail.zoho.com/api';
         $url = $apiBase . "/messages/$messageId";
         $response = $this->zohoApiGet($url, $accessToken);
+        Log::info('Zoho Mail REST API payload', ['url' => $url, 'payload' => $response]);
         if (empty($response['attachments'])) return [];
         $attachments = [];
         foreach ($response['attachments'] as $att) {
