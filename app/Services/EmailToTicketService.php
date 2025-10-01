@@ -496,14 +496,29 @@ class EmailToTicketService
         }
         if (!$accessToken) return [];
         $apiBase = $config['api_base'] ?? 'https://mail.zoho.com/api';
-        $url = $apiBase . "/messages/$messageId";
-        $response = $this->zohoApiGet($url, $accessToken);
-        Log::info('Zoho Mail REST API payload', ['url' => $url, 'payload' => $response]);
-        if (empty($response['attachments'])) return [];
+        // 1. Obtener accountId
+        $accountsUrl = $apiBase . "/accounts";
+        $accountsResp = $this->zohoApiGet($accountsUrl, $accessToken);
+        Log::info('Zoho Mail REST API accounts payload', ['url' => $accountsUrl, 'payload' => $accountsResp]);
+        $accountId = $accountsResp['data'][0]['accountId'] ?? null;
+        if (!$accountId) return [];
+        // 2. Buscar folderId usando messageId
+        $searchUrl = $apiBase . "/accounts/$accountId/messages/search?searchKey=messageId&searchValue=$messageId";
+        $searchResp = $this->zohoApiGet($searchUrl, $accessToken);
+        Log::info('Zoho Mail REST API search payload', ['url' => $searchUrl, 'payload' => $searchResp]);
+        $message = $searchResp['data'][0] ?? null;
+        $folderId = $message['folderId'] ?? null;
+        if (!$folderId) return [];
+        // 3. Obtener detalles del mensaje y adjuntos
+        $detailsUrl = $apiBase . "/accounts/$accountId/folders/$folderId/messages/$messageId/details";
+        $detailsResp = $this->zohoApiGet($detailsUrl, $accessToken);
+        Log::info('Zoho Mail REST API details payload', ['url' => $detailsUrl, 'payload' => $detailsResp]);
+        if (empty($detailsResp['attachments'])) return [];
         $attachments = [];
-        foreach ($response['attachments'] as $att) {
-            // Descargar todos los adjuntos, incluyendo disposition: inline
-            $attUrl = $apiBase . "/messages/$messageId/attachments/" . $att['attachmentId'];
+        foreach ($detailsResp['attachments'] as $att) {
+            $attachmentId = $att['attachmentId'] ?? null;
+            if (!$attachmentId) continue;
+            $attUrl = $apiBase . "/accounts/$accountId/folders/$folderId/messages/$messageId/attachments/$attachmentId";
             $attData = $this->zohoApiGet($attUrl, $accessToken, true);
             if ($attData) {
                 $attachments[] = [
