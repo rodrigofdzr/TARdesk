@@ -38,5 +38,11 @@ return [
     'zoho_mail' => [
         // Set ZOHO_MAIL_WEBHOOK_SECRET in your .env for signature verification
         'webhook_secret' => env('ZOHO_MAIL_WEBHOOK_SECRET'),
+        // REST API credentials
+        'client_id' => env('ZOHO_MAIL_CLIENT_ID'),
+        'client_secret' => env('ZOHO_MAIL_CLIENT_SECRET'),
+        'refresh_token' => env('ZOHO_MAIL_REFRESH_TOKEN'),
+        'access_token' => env('ZOHO_MAIL_ACCESS_TOKEN'), // If you want to set manually
+        'api_base' => env('ZOHO_MAIL_API_BASE', 'https://mail.zoho.com/api'),
     ],
 ];

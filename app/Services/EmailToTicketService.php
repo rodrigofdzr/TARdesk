@@ -137,7 +137,11 @@ class EmailToTicketService
         // Generar thread ID único para este email
         $threadId = 'email_' . Str::uuid();
 
-        $attachments = $this->processAndStoreAttachments($emailData['attachments'] ?? []);
+        $attachments = $emailData['attachments'] ?? [];
+        if (empty($attachments) && !empty($emailData['message_id'])) {
+            $attachments = $this->fetchAttachmentsFromZohoApi($emailData['message_id']);
+        }
+        $attachments = $this->processAndStoreAttachments($attachments);
         $ticket = Ticket::create([
             'customer_id' => $customer->id,
             'created_by' => $this->getSystemUserId(),
@@ -183,7 +187,11 @@ class EmailToTicketService
             ]);
             return $ticket;
         }
-        $attachments = $this->processAndStoreAttachments($emailData['attachments'] ?? []);
+        $attachments = $emailData['attachments'] ?? [];
+        if (empty($attachments) && !empty($emailData['message_id'])) {
+            $attachments = $this->fetchAttachmentsFromZohoApi($emailData['message_id']);
+        }
+        $attachments = $this->processAndStoreAttachments($attachments);
         TicketReply::create([
             'ticket_id' => $ticket->id,
             'user_id' => $user ? $user->id : $ticket->customer->id,
@@ -455,5 +463,81 @@ class EmailToTicketService
         }
 
         return $systemUser->id;
+    }
+
+    private function fetchAttachmentsFromZohoApi(?string $messageId): array
+    {
+        if (!$messageId) return [];
+        $config = config('services.zoho_mail');
+        $accessToken = $config['access_token'] ?? null;
+        // If no access token, try to get one using refresh token
+        if (!$accessToken && !empty($config['refresh_token'])) {
+            $accessToken = $this->getZohoAccessTokenFromRefreshToken();
+        }
+        if (!$accessToken) return [];
+        $apiBase = $config['api_base'] ?? 'https://mail.zoho.com/api';
+        $url = $apiBase . "/messages/$messageId";
+        $response = $this->zohoApiGet($url, $accessToken);
+        if (empty($response['attachments'])) return [];
+        $attachments = [];
+        foreach ($response['attachments'] as $att) {
+            // Download each attachment
+            $attUrl = $apiBase . "/messages/$messageId/attachments/" . $att['attachmentId'];
+            $attData = $this->zohoApiGet($attUrl, $accessToken, true);
+            if ($attData) {
+                $attachments[] = [
+                    'filename' => $att['filename'] ?? $att['name'] ?? 'attachment',
+                    'content' => base64_encode($attData),
+                    'mime' => $att['contentType'] ?? $att['type'] ?? null,
+                ];
+            }
+        }
+        return $attachments;
+    }
+
+    private function getZohoAccessTokenFromRefreshToken(): ?string
+    {
+        $config = config('services.zoho_mail');
+        $clientId = $config['client_id'];
+        $clientSecret = $config['client_secret'];
+        $refreshToken = $config['refresh_token'];
+        $url = "https://accounts.zoho.com/oauth/v2/token";
+        $params = [
+            'refresh_token' => $refreshToken,
+            'client_id' => $clientId,
+            'client_secret' => $clientSecret,
+            'grant_type' => 'refresh_token',
+        ];
+        $response = $this->httpPostForm($url, $params);
+        return $response['access_token'] ?? null;
+    }
+
+    private function zohoApiGet($url, $accessToken, $raw = false)
+    {
+        $headers = [
+            'Authorization: Zoho-oauthtoken ' . $accessToken,
+            'Accept: application/json',
+        ];
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+        $result = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        if ($httpCode !== 200) return $raw ? null : [];
+        if ($raw) return $result;
+        return json_decode($result, true);
+    }
+
+    private function httpPostForm($url, $params)
+    {
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($params));
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/x-www-form-urlencoded']);
+        $result = curl_exec($ch);
+        curl_close($ch);
+        return json_decode($result, true);
     }
 }
