@@ -491,7 +491,6 @@ class EmailToTicketService
         if (!$messageId) return [];
         $config = config('services.zoho_mail');
         $accessToken = $config['access_token'] ?? null;
-        // If no access token, try to get one using refresh token
         if (!$accessToken && !empty($config['refresh_token'])) {
             $accessToken = $this->getZohoAccessTokenFromRefreshToken();
         }
@@ -502,7 +501,7 @@ class EmailToTicketService
         if (empty($response['attachments'])) return [];
         $attachments = [];
         foreach ($response['attachments'] as $att) {
-            // Download each attachment
+            // Descargar todos los adjuntos, incluyendo disposition: inline
             $attUrl = $apiBase . "/messages/$messageId/attachments/" . $att['attachmentId'];
             $attData = $this->zohoApiGet($attUrl, $accessToken, true);
             if ($attData) {
@@ -510,6 +509,8 @@ class EmailToTicketService
                     'filename' => $att['filename'] ?? $att['name'] ?? 'attachment',
                     'content' => base64_encode($attData),
                     'mime' => $att['contentType'] ?? $att['type'] ?? null,
+                    'disposition' => $att['disposition'] ?? null,
+                    'cid' => $att['contentId'] ?? null,
                 ];
             }
         }
