@@ -25,7 +25,8 @@ Route::post('/webhooks/zoho-mail', [ZohoWebhookController::class, 'handle'])
     ->name('webhooks.zoho_mail')
     ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class]);
 
-// Callback para la autorización de Zoho OAuth2
+// Zoho OAuth2 routes
+Route::get('/oauth/zoho/authorize', [ZohoOauthController::class, 'authorize'])->name('zoho.oauth.authorize');
 Route::get('/oauth/zoho/callback', [ZohoOauthController::class, 'callback'])->name('zoho.oauth.callback');
 
 // Todas las gestiones de agentes, tickets, plantillas y clientes se hacen desde /admin (Filament)

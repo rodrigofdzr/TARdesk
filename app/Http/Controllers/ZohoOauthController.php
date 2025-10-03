@@ -8,6 +8,41 @@ use Illuminate\Support\Facades\Log;
 class ZohoOauthController extends Controller
 {
     /**
+     * Redirect to Zoho OAuth authorization page
+     */
+    public function authorize()
+    {
+        $clientId = config('services.zoho_mail.client_id');
+
+        if (!$clientId) {
+            return response()->json([
+                'error' => 'ZOHO_MAIL_CLIENT_ID not configured in .env file'
+            ], 500);
+        }
+
+        $redirectUri = url('/oauth/zoho/callback');
+        $scope = 'ZohoMail.messages.ALL,ZohoMail.accounts.READ';
+        $accessType = 'offline'; // To get refresh token
+
+        $authUrl = 'https://accounts.zoho.com/oauth/v2/auth?' . http_build_query([
+            'scope' => $scope,
+            'client_id' => $clientId,
+            'response_type' => 'code',
+            'access_type' => $accessType,
+            'redirect_uri' => $redirectUri,
+            'prompt' => 'consent', // Force to show consent screen
+        ]);
+
+        Log::info('Redirecting to Zoho OAuth authorization', [
+            'auth_url' => $authUrl,
+            'redirect_uri' => $redirectUri,
+            'scope' => $scope
+        ]);
+
+        return redirect($authUrl);
+    }
+
+    /**
      * Handle Zoho OAuth2 callback and exchange code for tokens
      */
     public function callback(Request $request)

@@ -44,5 +44,6 @@ return [
         'refresh_token' => env('ZOHO_MAIL_REFRESH_TOKEN'),
         'access_token' => env('ZOHO_MAIL_ACCESS_TOKEN'), // If you want to set manually
         'api_base' => env('ZOHO_MAIL_API_BASE', 'https://mail.zoho.com/api'),
+        'account_id' => env('ZOHO_MAIL_ACCOUNT_ID'),
     ],
 ];

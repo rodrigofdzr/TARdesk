@@ -488,49 +488,126 @@ class EmailToTicketService
 
     private function fetchAttachmentsFromZohoApi(?string $messageId): array
     {
-        if (!$messageId) return [];
-        $config = config('services.zoho_mail');
-        $accessToken = $config['access_token'] ?? null;
-        if (!$accessToken && !empty($config['refresh_token'])) {
-            $accessToken = $this->getZohoAccessTokenFromRefreshToken();
+        if (!$messageId) {
+            Log::warning('No message_id provided for attachment fetch');
+            return [];
         }
-        if (!$accessToken) return [];
+
+        $config = config('services.zoho_mail');
+        $clientId = $config['client_id'] ?? null;
+        $clientSecret = $config['client_secret'] ?? null;
+        $refreshToken = $config['refresh_token'] ?? null;
+
+        if (!$clientId || !$clientSecret || !$refreshToken) {
+            Log::warning('Zoho Mail API credentials not configured', [
+                'has_client_id' => !empty($clientId),
+                'has_client_secret' => !empty($clientSecret),
+                'has_refresh_token' => !empty($refreshToken)
+            ]);
+            return [];
+        }
+
+        // Get fresh access token
+        $accessToken = $this->getZohoAccessTokenFromRefreshToken();
+        if (!$accessToken) {
+            Log::error('Failed to obtain Zoho access token');
+            return [];
+        }
+
         $apiBase = $config['api_base'] ?? 'https://mail.zoho.com/api';
-        // 1. Obtener accountId
-        $accountsUrl = $apiBase . "/accounts";
-        $accountsResp = $this->zohoApiGet($accountsUrl, $accessToken);
-        Log::info('Zoho Mail REST API accounts payload', ['url' => $accountsUrl, 'payload' => $accountsResp]);
-        $accountId = $accountsResp['data'][0]['accountId'] ?? null;
-        if (!$accountId) return [];
-        // 2. Buscar folderId usando messageId
-        $searchUrl = $apiBase . "/accounts/$accountId/messages/search?searchKey=messageId&searchValue=$messageId";
-        $searchResp = $this->zohoApiGet($searchUrl, $accessToken);
-        Log::info('Zoho Mail REST API search payload', ['url' => $searchUrl, 'payload' => $searchResp]);
-        $message = $searchResp['data'][0] ?? null;
-        $folderId = $message['folderId'] ?? null;
-        if (!$folderId) return [];
-        // 3. Obtener detalles del mensaje y adjuntos
-        $detailsUrl = $apiBase . "/accounts/$accountId/folders/$folderId/messages/$messageId/details";
-        $detailsResp = $this->zohoApiGet($detailsUrl, $accessToken);
-        Log::info('Zoho Mail REST API details payload', ['url' => $detailsUrl, 'payload' => $detailsResp]);
-        if (empty($detailsResp['attachments'])) return [];
+
+        // Get accountId (cache it if needed)
+        $accountId = $config['account_id'] ?? null;
+        if (!$accountId) {
+            $accountId = $this->getZohoAccountId($apiBase, $accessToken);
+            if (!$accountId) {
+                Log::error('Failed to obtain Zoho account ID');
+                return [];
+            }
+            Log::info('Zoho account ID obtained', ['account_id' => $accountId]);
+        }
+
+        // Get attachment info using the correct endpoint
+        $attachmentInfoUrl = "{$apiBase}/accounts/{$accountId}/messages/{$messageId}/attachmentinfo";
+        Log::info('Fetching attachment info', ['url' => $attachmentInfoUrl]);
+
+        $attachmentInfo = $this->zohoApiGet($attachmentInfoUrl, $accessToken);
+
+        if (empty($attachmentInfo['data'])) {
+            Log::info('No attachments found for message', ['message_id' => $messageId]);
+            return [];
+        }
+
+        Log::info('Attachment info received', [
+            'message_id' => $messageId,
+            'count' => count($attachmentInfo['data']),
+            'attachments' => array_map(function($att) {
+                return [
+                    'name' => $att['attachmentName'] ?? $att['fileName'] ?? 'unknown',
+                    'size' => $att['size'] ?? 0,
+                    'type' => $att['contentType'] ?? 'unknown'
+                ];
+            }, $attachmentInfo['data'])
+        );
+
         $attachments = [];
-        foreach ($detailsResp['attachments'] as $att) {
-            $attachmentId = $att['attachmentId'] ?? null;
-            if (!$attachmentId) continue;
-            $attUrl = $apiBase . "/accounts/$accountId/folders/$folderId/messages/$messageId/attachments/$attachmentId";
-            $attData = $this->zohoApiGet($attUrl, $accessToken, true);
+        foreach ($attachmentInfo['data'] as $att) {
+            // Skip inline images if you want, or process them too
+            $isInline = ($att['isInline'] ?? false) || ($att['disposition'] ?? '') === 'inline';
+
+            $attachmentPath = $att['attachmentPath'] ?? null;
+            $attachmentName = $att['attachmentName'] ?? $att['fileName'] ?? 'attachment';
+
+            if (!$attachmentPath) {
+                Log::warning('Attachment without path', ['attachment' => $att]);
+                continue;
+            }
+
+            // Download attachment content using attachmentPath
+            $downloadUrl = "{$apiBase}/accounts/{$accountId}/{$attachmentPath}";
+            Log::info('Downloading attachment', ['url' => $downloadUrl, 'name' => $attachmentName]);
+
+            $attData = $this->zohoApiGet($downloadUrl, $accessToken, true);
+
             if ($attData) {
                 $attachments[] = [
-                    'filename' => $att['filename'] ?? $att['name'] ?? 'attachment',
+                    'filename' => $attachmentName,
                     'content' => base64_encode($attData),
-                    'mime' => $att['contentType'] ?? $att['type'] ?? null,
-                    'disposition' => $att['disposition'] ?? null,
+                    'mime' => $att['contentType'] ?? 'application/octet-stream',
+                    'size' => strlen($attData),
+                    'disposition' => $isInline ? 'inline' : 'attachment',
                     'cid' => $att['contentId'] ?? null,
                 ];
+                Log::info('Attachment downloaded successfully', [
+                    'filename' => $attachmentName,
+                    'size' => strlen($attData)
+                ]);
+            } else {
+                Log::error('Failed to download attachment content', [
+                    'url' => $downloadUrl,
+                    'name' => $attachmentName
+                ]);
             }
         }
+
         return $attachments;
+    }
+
+    private function getZohoAccountId(string $apiBase, string $accessToken): ?string
+    {
+        $accountsUrl = "{$apiBase}/accounts";
+        $accountsResp = $this->zohoApiGet($accountsUrl, $accessToken);
+
+        Log::info('Zoho Mail API accounts response', [
+            'url' => $accountsUrl,
+            'response' => $accountsResp
+        ]);
+
+        if (!empty($accountsResp['data'][0]['accountId'])) {
+            return $accountsResp['data'][0]['accountId'];
+        }
+
+        return null;
     }
 
     private function getZohoAccessTokenFromRefreshToken(): ?string
@@ -539,6 +616,16 @@ class EmailToTicketService
         $clientId = $config['client_id'];
         $clientSecret = $config['client_secret'];
         $refreshToken = $config['refresh_token'];
+
+        if (!$clientId || !$clientSecret || !$refreshToken) {
+            Log::error('Missing Zoho OAuth credentials', [
+                'has_client_id' => !empty($clientId),
+                'has_client_secret' => !empty($clientSecret),
+                'has_refresh_token' => !empty($refreshToken)
+            ]);
+            return null;
+        }
+
         $url = "https://accounts.zoho.com/oauth/v2/token";
         $params = [
             'refresh_token' => $refreshToken,
@@ -546,8 +633,27 @@ class EmailToTicketService
             'client_secret' => $clientSecret,
             'grant_type' => 'refresh_token',
         ];
-        $response = $this->httpPostForm($url, $params);
-        return $response['access_token'] ?? null;
+
+        try {
+            $response = $this->httpPostForm($url, $params);
+
+            if (isset($response['access_token'])) {
+                Log::info('Zoho access token refreshed successfully', [
+                    'expires_in' => $response['expires_in'] ?? null
+                ]);
+                return $response['access_token'];
+            } else {
+                Log::error('Failed to refresh Zoho access token', [
+                    'response' => $response
+                ]);
+                return null;
+            }
+        } catch (\Exception $e) {
+            Log::error('Exception refreshing Zoho access token', [
+                'error' => $e->getMessage()
+            ]);
+            return null;
+        }
     }
 
     private function zohoApiGet($url, $accessToken, $raw = false)
@@ -556,15 +662,51 @@ class EmailToTicketService
             'Authorization: Zoho-oauthtoken ' . $accessToken,
             'Accept: application/json',
         ];
+
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+
         $result = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
         curl_close($ch);
-        if ($httpCode !== 200) return $raw ? null : [];
-        if ($raw) return $result;
-        return json_decode($result, true);
+
+        if ($curlError) {
+            Log::error('Zoho API cURL error', [
+                'url' => $url,
+                'error' => $curlError
+            ]);
+            return $raw ? null : [];
+        }
+
+        if ($httpCode !== 200) {
+            Log::error('Zoho API HTTP error', [
+                'url' => $url,
+                'http_code' => $httpCode,
+                'response' => substr($result, 0, 500)
+            ]);
+            return $raw ? null : [];
+        }
+
+        if ($raw) {
+            return $result;
+        }
+
+        $decoded = json_decode($result, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            Log::error('Zoho API invalid JSON', [
+                'url' => $url,
+                'json_error' => json_last_error_msg(),
+                'response' => substr($result, 0, 500)
+            ]);
+            return [];
+        }
+
+        return $decoded;
     }
 
     private function httpPostForm($url, $params)
@@ -574,8 +716,31 @@ class EmailToTicketService
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($params));
         curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/x-www-form-urlencoded']);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
+
         $result = curl_exec($ch);
+        $curlError = curl_error($ch);
         curl_close($ch);
-        return json_decode($result, true);
+
+        if ($curlError) {
+            Log::error('HTTP POST cURL error', [
+                'url' => $url,
+                'error' => $curlError
+            ]);
+            return [];
+        }
+
+        $decoded = json_decode($result, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            Log::error('HTTP POST invalid JSON response', [
+                'url' => $url,
+                'json_error' => json_last_error_msg(),
+                'response' => substr($result, 0, 500)
+            ]);
+            return [];
+        }
+
+        return $decoded;
     }
 }
