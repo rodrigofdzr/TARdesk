@@ -247,8 +247,9 @@ class EmailToTicketService
             $path = 'ticket_attachments/' . $filename;
             $content = base64_decode($attachment['content']);
             try {
-                \Storage::disk('public')->put($path, $content);
-                Log::info('Adjunto guardado en storage', ['filename' => $filename, 'path' => $path, 'size' => strlen($content)]);
+                // Use private storage instead of public
+                \Storage::disk('local')->put($path, $content);
+                Log::info('Adjunto guardado en storage privado', ['filename' => $filename, 'path' => $path, 'size' => strlen($content)]);
             } catch (\Exception $e) {
                 Log::error('Error guardando adjunto en storage', ['filename' => $filename, 'error' => $e->getMessage()]);
                 continue;
