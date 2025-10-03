@@ -528,80 +528,127 @@ class EmailToTicketService
         }
 
         // First, we need to find the folderId for this message
-        // Use the view endpoint to list recent messages and find our message
-        // According to Zoho API, we need to search in a specific folder or use the view endpoint
+        // The message will always arrive in Inbox according to user
         Log::info('Getting recent messages to find folderId', [
             'message_id' => $messageId,
             'account_id' => $accountId
         ]);
 
-        // Try to get messages from Inbox folder first (most common case)
-        // Folder IDs in Zoho: Inbox is typically the first folder or we can try common folder IDs
-        $commonFolderIds = ['120838000000000001', 'Inbox', '1', 'INBOX'];
-
         $folderId = null;
         $foundMessage = null;
 
-        // First, try to get folder list
+        // Get folder list to find Inbox folderId
         $foldersUrl = "{$apiBase}/accounts/{$accountId}/folders";
         $foldersResponse = $this->zohoApiGet($foldersUrl, $accessToken);
 
-        if (!empty($foldersResponse['data'])) {
-            Log::info('Folders obtained from Zoho', [
-                'count' => count($foldersResponse['data']),
-                'folders' => array_map(function($f) {
-                    return [
-                        'id' => $f['folderId'] ?? 'unknown',
-                        'name' => $f['folderName'] ?? 'unknown'
-                    ];
-                }, $foldersResponse['data'])
-            ]);
-
-            // Search for message in each folder
-            foreach ($foldersResponse['data'] as $folder) {
-                $testFolderId = $folder['folderId'] ?? null;
-                if (!$testFolderId) continue;
-
-                // Get recent messages from this folder
-                $viewUrl = "{$apiBase}/accounts/{$accountId}/messages/view";
-                $viewParams = http_build_query([
-                    'folderId' => $testFolderId,
-                    'limit' => 50,
-                    'sortBy' => 'receivedTime'
-                ]);
-
-                $messagesResponse = $this->zohoApiGet("{$viewUrl}?{$viewParams}", $accessToken);
-
-                if (!empty($messagesResponse['data'])) {
-                    // Search for our message by messageId
-                    foreach ($messagesResponse['data'] as $msg) {
-                        if (($msg['messageId'] ?? null) == $messageId) {
-                            $folderId = $testFolderId;
-                            $foundMessage = $msg;
-                            Log::info('Message found in folder', [
-                                'message_id' => $messageId,
-                                'folder_id' => $folderId,
-                                'folder_name' => $folder['folderName'] ?? 'unknown'
-                            ]);
-                            break 2; // Break both loops
-                        }
-                    }
-                }
-            }
-        }
-
-        if (!$folderId || !$foundMessage) {
-            Log::warning('Message not found in any folder', [
-                'message_id' => $messageId,
-                'searched_folders' => !empty($foldersResponse['data']) ? count($foldersResponse['data']) : 0
+        if (empty($foldersResponse['data'])) {
+            Log::error('Failed to get folders from Zoho', [
+                'response' => $foldersResponse
             ]);
             return [];
         }
 
-        Log::info('FolderId obtained for message', [
-            'message_id' => $messageId,
-            'folder_id' => $folderId
+        Log::info('Folders obtained from Zoho', [
+            'count' => count($foldersResponse['data']),
+            'folders' => array_map(function($f) {
+                return [
+                    'id' => $f['folderId'] ?? 'unknown',
+                    'name' => $f['folderName'] ?? 'unknown'
+                ];
+            }, $foldersResponse['data'])
         ]);
+
+        // Find Inbox folder
+        $inboxFolderId = null;
+        foreach ($foldersResponse['data'] as $folder) {
+            if (($folder['folderName'] ?? '') === 'Inbox') {
+                $inboxFolderId = $folder['folderId'] ?? null;
+                break;
+            }
+        }
+
+        if (!$inboxFolderId) {
+            Log::error('Inbox folder not found', [
+                'folders' => $foldersResponse['data']
+            ]);
+            return [];
+        }
+
+        Log::info('Inbox folder found', ['folder_id' => $inboxFolderId]);
+
+        // Try to find the message in Inbox - sometimes there's a delay, so retry a few times
+        $maxAttempts = 3;
+        $attemptDelay = 2; // seconds
+
+        for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+            Log::info('Searching for message in Inbox', [
+                'attempt' => $attempt,
+                'max_attempts' => $maxAttempts,
+                'message_id' => $messageId
+            ]);
+
+            // Get recent messages from Inbox with higher limit
+            $viewUrl = "{$apiBase}/accounts/{$accountId}/messages/view";
+            $viewParams = http_build_query([
+                'folderId' => $inboxFolderId,
+                'limit' => 200, // Increased limit
+                'sortBy' => 'receivedTime'
+            ]);
+
+            $messagesResponse = $this->zohoApiGet("{$viewUrl}?{$viewParams}", $accessToken);
+
+            if (!empty($messagesResponse['data'])) {
+                Log::info('Messages retrieved from Inbox', [
+                    'count' => count($messagesResponse['data']),
+                    'attempt' => $attempt
+                ]);
+
+                // Search for our message by messageId
+                foreach ($messagesResponse['data'] as $msg) {
+                    $msgId = $msg['messageId'] ?? null;
+
+                    // Log first few messages for debugging
+                    if (count($messagesResponse['data']) <= 5) {
+                        Log::debug('Checking message', [
+                            'msg_id' => $msgId,
+                            'subject' => $msg['subject'] ?? 'no subject',
+                            'looking_for' => $messageId
+                        ]);
+                    }
+
+                    if ($msgId == $messageId) {
+                        $folderId = $inboxFolderId;
+                        $foundMessage = $msg;
+                        Log::info('Message found in Inbox', [
+                            'message_id' => $messageId,
+                            'folder_id' => $folderId,
+                            'attempt' => $attempt,
+                            'subject' => $msg['subject'] ?? 'no subject'
+                        ]);
+                        break 2; // Break both loops
+                    }
+                }
+            }
+
+            // If not found and not the last attempt, wait before retrying
+            if (!$foundMessage && $attempt < $maxAttempts) {
+                Log::info('Message not found, waiting before retry', [
+                    'attempt' => $attempt,
+                    'wait_seconds' => $attemptDelay
+                ]);
+                sleep($attemptDelay);
+            }
+        }
+
+        if (!$folderId || !$foundMessage) {
+            Log::warning('Message not found in Inbox after all attempts', [
+                'message_id' => $messageId,
+                'attempts' => $maxAttempts,
+                'inbox_folder_id' => $inboxFolderId
+            ]);
+            return [];
+        }
+
 
         // Now get attachment info using the correct endpoint with folderId
         $attachmentInfoUrl = "{$apiBase}/accounts/{$accountId}/folders/{$folderId}/messages/{$messageId}/attachmentinfo";
