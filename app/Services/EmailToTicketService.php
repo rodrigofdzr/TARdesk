@@ -548,7 +548,7 @@ class EmailToTicketService
                     'type' => $att['contentType'] ?? 'unknown'
                 ];
             }, $attachmentInfo['data'])
-        );
+        ]);
 
         $attachments = [];
         foreach ($attachmentInfo['data'] as $att) {
