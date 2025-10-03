@@ -680,26 +680,40 @@ class EmailToTicketService
             return [];
         }
 
+        // The response structure has 'attachments' array inside 'data'
+        $attachmentsList = $attachmentInfo['data']['attachments'] ?? [];
+
+        if (empty($attachmentsList)) {
+            Log::info('No attachments array in response', [
+                'message_id' => $messageId,
+                'folder_id' => $folderId,
+                'response_structure' => array_keys($attachmentInfo['data'] ?? [])
+            ]);
+            return [];
+        }
+
         Log::info('Attachment info received', [
             'message_id' => $messageId,
             'folder_id' => $folderId,
-            'count' => count($attachmentInfo['data']),
+            'count' => count($attachmentsList),
             'attachments' => array_map(function($att) {
                 return [
                     'name' => $att['attachmentName'] ?? $att['fileName'] ?? 'unknown',
-                    'size' => $att['size'] ?? 0,
-                    'type' => $att['contentType'] ?? 'unknown'
+                    'size' => $att['attachmentSize'] ?? $att['size'] ?? 0,
+                    'type' => $att['contentType'] ?? 'unknown',
+                    'id' => $att['attachmentId'] ?? 'no-id'
                 ];
-            }, $attachmentInfo['data'])
+            }, $attachmentsList)
         ]);
 
         $attachments = [];
-        foreach ($attachmentInfo['data'] as $att) {
+        foreach ($attachmentsList as $att) {
             // Skip inline images if you want, or process them too
             $isInline = ($att['isInline'] ?? false) || ($att['disposition'] ?? '') === 'inline';
 
             $attachmentId = $att['attachmentId'] ?? null;
             $attachmentName = $att['attachmentName'] ?? $att['fileName'] ?? 'attachment';
+            $attachmentSize = $att['attachmentSize'] ?? $att['size'] ?? 0;
 
             if (!$attachmentId) {
                 Log::warning('Attachment without ID', ['attachment' => $att]);
