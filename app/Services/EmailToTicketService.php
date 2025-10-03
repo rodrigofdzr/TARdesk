@@ -527,19 +527,66 @@ class EmailToTicketService
             Log::info('Zoho account ID obtained', ['account_id' => $accountId]);
         }
 
-        // Get attachment info using the correct endpoint
-        $attachmentInfoUrl = "{$apiBase}/accounts/{$accountId}/messages/{$messageId}/attachmentinfo";
-        Log::info('Fetching attachment info', ['url' => $attachmentInfoUrl]);
+        // First, we need to find the folderId for this message
+        // Search for the message to get its folderId
+        $searchUrl = "{$apiBase}/accounts/{$accountId}/messages/search";
+        Log::info('Searching for message to get folderId', [
+            'url' => $searchUrl,
+            'message_id' => $messageId
+        ]);
+
+        $searchParams = http_build_query([
+            'searchKey' => 'messageId',
+            'searchValue' => $messageId
+        ]);
+        $searchResponse = $this->zohoApiGet("{$searchUrl}?{$searchParams}", $accessToken);
+
+        if (empty($searchResponse['data'][0])) {
+            Log::warning('Message not found in Zoho Mail search', [
+                'message_id' => $messageId,
+                'search_response' => $searchResponse
+            ]);
+            return [];
+        }
+
+        $messageData = $searchResponse['data'][0];
+        $folderId = $messageData['folderId'] ?? null;
+
+        if (!$folderId) {
+            Log::error('No folderId found for message', [
+                'message_id' => $messageId,
+                'message_data' => $messageData
+            ]);
+            return [];
+        }
+
+        Log::info('FolderId obtained for message', [
+            'message_id' => $messageId,
+            'folder_id' => $folderId
+        ]);
+
+        // Now get attachment info using the correct endpoint with folderId
+        $attachmentInfoUrl = "{$apiBase}/accounts/{$accountId}/folders/{$folderId}/messages/{$messageId}/attachmentinfo";
+        Log::info('Fetching attachment info', [
+            'url' => $attachmentInfoUrl,
+            'account_id' => $accountId,
+            'folder_id' => $folderId,
+            'message_id' => $messageId
+        ]);
 
         $attachmentInfo = $this->zohoApiGet($attachmentInfoUrl, $accessToken);
 
         if (empty($attachmentInfo['data'])) {
-            Log::info('No attachments found for message', ['message_id' => $messageId]);
+            Log::info('No attachments found for message', [
+                'message_id' => $messageId,
+                'folder_id' => $folderId
+            ]);
             return [];
         }
 
         Log::info('Attachment info received', [
             'message_id' => $messageId,
+            'folder_id' => $folderId,
             'count' => count($attachmentInfo['data']),
             'attachments' => array_map(function($att) {
                 return [
@@ -555,17 +602,21 @@ class EmailToTicketService
             // Skip inline images if you want, or process them too
             $isInline = ($att['isInline'] ?? false) || ($att['disposition'] ?? '') === 'inline';
 
-            $attachmentPath = $att['attachmentPath'] ?? null;
+            $attachmentId = $att['attachmentId'] ?? null;
             $attachmentName = $att['attachmentName'] ?? $att['fileName'] ?? 'attachment';
 
-            if (!$attachmentPath) {
-                Log::warning('Attachment without path', ['attachment' => $att]);
+            if (!$attachmentId) {
+                Log::warning('Attachment without ID', ['attachment' => $att]);
                 continue;
             }
 
-            // Download attachment content using attachmentPath
-            $downloadUrl = "{$apiBase}/accounts/{$accountId}/{$attachmentPath}";
-            Log::info('Downloading attachment', ['url' => $downloadUrl, 'name' => $attachmentName]);
+            // Download attachment content using the correct endpoint with folderId
+            $downloadUrl = "{$apiBase}/accounts/{$accountId}/folders/{$folderId}/messages/{$messageId}/attachments/{$attachmentId}";
+            Log::info('Downloading attachment', [
+                'url' => $downloadUrl,
+                'name' => $attachmentName,
+                'attachment_id' => $attachmentId
+            ]);
 
             $attData = $this->zohoApiGet($downloadUrl, $accessToken, true);
 
@@ -585,7 +636,8 @@ class EmailToTicketService
             } else {
                 Log::error('Failed to download attachment content', [
                     'url' => $downloadUrl,
-                    'name' => $attachmentName
+                    'name' => $attachmentName,
+                    'attachment_id' => $attachmentId
                 ]);
             }
         }
