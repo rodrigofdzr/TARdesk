@@ -21,7 +21,8 @@ class ZohoOauthController extends Controller
         }
 
         $redirectUri = url('/oauth/zoho/callback');
-        $scope = 'ZohoMail.messages.ALL,ZohoMail.accounts.READ';
+        // Updated scopes according to Zoho Mail API documentation
+        $scope = 'ZohoMail.messages.ALL,ZohoMail.accounts.READ,ZohoMail.folders.READ';
         $accessType = 'offline'; // To get refresh token
 
         $authUrl = 'https://accounts.zoho.com/oauth/v2/auth?' . http_build_query([

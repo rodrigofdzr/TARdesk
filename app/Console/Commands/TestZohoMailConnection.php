@@ -102,10 +102,32 @@ class TestZohoMailConnection extends Command
         if ($httpCode !== 200) {
             $this->error("HTTP Error: $httpCode");
             $this->line($result);
+            $response = json_decode($result, true);
+            if (isset($response['error'])) {
+                $this->newLine();
+                $this->error("Error: " . ($response['error'] ?? 'Unknown'));
+                if (isset($response['error_description'])) {
+                    $this->line("Description: " . $response['error_description']);
+                }
+                $this->newLine();
+                $this->warn('Your refresh token might be invalid or expired.');
+                $this->warn('Please visit /oauth/zoho/authorize to get a new one.');
+            }
             return null;
         }
 
         $response = json_decode($result, true);
+
+        if (isset($response['error'])) {
+            $this->error("Token error: " . $response['error']);
+            return null;
+        }
+
+        // Show token info
+        if (isset($response['scope'])) {
+            $this->line("Token scope: " . $response['scope']);
+        }
+
         return $response['access_token'] ?? null;
     }
 
@@ -127,7 +149,31 @@ class TestZohoMailConnection extends Command
 
         if ($httpCode !== 200) {
             $this->error("HTTP Error: $httpCode");
-            $this->line($result);
+            $this->newLine();
+
+            $response = json_decode($result, true);
+            if (is_array($response)) {
+                $this->line(json_encode($response, JSON_PRETTY_PRINT));
+            } else {
+                $this->line($result);
+            }
+
+            $this->newLine();
+
+            if ($httpCode === 401) {
+                $this->warn('Authentication failed. This could mean:');
+                $this->line('1. Your refresh token is missing required scopes');
+                $this->line('2. The access token expired and refresh failed');
+                $this->line('3. Your Zoho Mail account needs re-authorization');
+                $this->newLine();
+                $this->info('Required scopes:');
+                $this->line('- ZohoMail.messages.ALL');
+                $this->line('- ZohoMail.accounts.READ');
+                $this->line('- ZohoMail.folders.READ');
+                $this->newLine();
+                $this->warn('Solution: Visit /oauth/zoho/authorize to re-authorize with correct scopes');
+            }
+
             return [];
         }
 
@@ -135,4 +181,3 @@ class TestZohoMailConnection extends Command
         return $response['data'] ?? [];
     }
 }
-
