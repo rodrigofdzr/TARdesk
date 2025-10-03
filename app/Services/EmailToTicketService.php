@@ -822,8 +822,12 @@ class EmailToTicketService
     {
         $headers = [
             'Authorization: Zoho-oauthtoken ' . $accessToken,
-            'Accept: application/json',
         ];
+
+        // Only add Accept header for JSON responses, not for raw file downloads
+        if (!$raw) {
+            $headers[] = 'Accept: application/json';
+        }
 
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
