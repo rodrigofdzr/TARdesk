@@ -591,8 +591,9 @@ class EmailToTicketService
             $viewUrl = "{$apiBase}/accounts/{$accountId}/messages/view";
             $viewParams = http_build_query([
                 'folderId' => $inboxFolderId,
-                'limit' => 200, // Increased limit
-                'sortBy' => 'receivedTime'
+                'limit' => 200,
+                'sortBy' => 'receivedTime',
+                'sortOrder' => 'desc' // Sort from newest to oldest
             ]);
 
             $messagesResponse = $this->zohoApiGet("{$viewUrl}?{$viewParams}", $accessToken);
