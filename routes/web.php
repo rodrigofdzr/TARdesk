@@ -29,4 +29,15 @@ Route::post('/webhooks/zoho-mail', [ZohoWebhookController::class, 'handle'])
 Route::get('/oauth/zoho/authorize', [ZohoOauthController::class, 'authorize'])->name('zoho.oauth.authorize');
 Route::get('/oauth/zoho/callback', [ZohoOauthController::class, 'callback'])->name('zoho.oauth.callback');
 
+// Webhook health check endpoint
+Route::get('/webhooks/zoho-mail/health', function () {
+    return response()->json([
+        'status' => 'ok',
+        'service' => 'TARdesk Zoho Mail Webhook',
+        'timestamp' => now()->toIso8601String(),
+        'endpoint' => url('/webhooks/zoho-mail'),
+        'ready' => true
+    ], 200);
+})->name('webhooks.zoho_mail.health');
+
 // Todas las gestiones de agentes, tickets, plantillas y clientes se hacen desde /admin (Filament)

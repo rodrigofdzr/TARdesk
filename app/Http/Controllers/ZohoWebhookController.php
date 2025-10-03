@@ -143,23 +143,54 @@ class ZohoWebhookController extends BaseController
 
     private function mapZohoPayloadToEmailData(array $payload): array
     {
-        // Zoho sends the email data inside the 'payload' key
+        // Zoho webhook sends data directly in the payload root or inside 'payload' key
+        // Based on actual Zoho webhook format observed
         $container = $payload['payload'] ?? $payload;
 
         // Map Zoho fields to internal format
+        // Try both the direct field names and nested variants
         $emailData = [
-            'from_email'    => $container['fromAddress'] ?? null,
-            'to_email'      => $container['toAddress'] ?? null,
+            'from_email'    => $container['from_email'] ?? $container['fromAddress'] ?? null,
+            'to_email'      => $container['to_email'] ?? $container['toAddress'] ?? null,
             'subject'       => $container['subject'] ?? null,
-            'body_html'     => $container['html'] ?? null,
-            'message_id'    => $container['messageIdString'] ?? $container['messageId'] ?? null,
-            'sender_name'   => $container['sender'] ?? null,
-            'received_time' => $container['receivedTime'] ?? null,
+            'body_html'     => $container['body_html'] ?? $container['html'] ?? $container['content'] ?? null,
+            'body'          => $container['body'] ?? $container['text'] ?? null,
+            'message_id'    => $container['message_id'] ?? $container['messageIdString'] ?? $container['messageId'] ?? null,
+            'from_name'     => $container['from_name'] ?? $container['sender_name'] ?? $container['sender'] ?? null,
+            'sender_name'   => $container['sender_name'] ?? $container['sender'] ?? null,
+            'received_time' => $container['received_time'] ?? $container['receivedTime'] ?? null,
+            'in_reply_to'   => $container['in_reply_to'] ?? $container['inReplyTo'] ?? null,
+            'references'    => $container['references'] ?? [],
+            'attachments'   => $container['attachments'] ?? [],
         ];
+
+        // Ensure references is an array
+        if (!is_array($emailData['references'])) {
+            $emailData['references'] = $emailData['references'] ? [$emailData['references']] : [];
+        }
+
+        // Ensure attachments is an array
+        if (!is_array($emailData['attachments'])) {
+            $emailData['attachments'] = [];
+        }
+
+        // Log the mapped data for debugging
+        Log::info('Zoho webhook payload mapped', [
+            'has_from_email' => !empty($emailData['from_email']),
+            'has_subject' => !empty($emailData['subject']),
+            'has_message_id' => !empty($emailData['message_id']),
+            'has_body_html' => !empty($emailData['body_html']),
+            'attachments_count' => count($emailData['attachments']),
+            'from_email' => $emailData['from_email'] ?? 'missing'
+        ]);
 
         // Log missing critical fields for debugging
         if (empty($emailData['from_email']) || empty($emailData['subject'])) {
-            Log::warning('Zoho webhook mapping: missing from_email or subject', ['container' => $container]);
+            Log::warning('Zoho webhook mapping: missing critical fields', [
+                'container_keys' => array_keys($container),
+                'mapped_from_email' => $emailData['from_email'] ?? 'null',
+                'mapped_subject' => $emailData['subject'] ?? 'null'
+            ]);
         }
 
         return $emailData;
