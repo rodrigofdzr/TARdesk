@@ -603,24 +603,34 @@ class EmailToTicketService
                     'attempt' => $attempt
                 ]);
 
+                // Log the first 10 message IDs to see the format
+                if ($attempt === 1) {
+                    $sampleMessages = array_slice($messagesResponse['data'], 0, 10);
+                    Log::info('Sample message IDs from Inbox', [
+                        'looking_for' => $messageId,
+                        'looking_for_type' => gettype($messageId),
+                        'sample_messages' => array_map(function($m) {
+                            return [
+                                'messageId' => $m['messageId'] ?? 'null',
+                                'messageId_type' => gettype($m['messageId'] ?? null),
+                                'subject' => substr($m['subject'] ?? 'no subject', 0, 50),
+                                'receivedTime' => $m['receivedTime'] ?? 'null'
+                            ];
+                        }, $sampleMessages)
+                    ]);
+                }
+
                 // Search for our message by messageId
                 foreach ($messagesResponse['data'] as $msg) {
                     $msgId = $msg['messageId'] ?? null;
 
-                    // Log first few messages for debugging
-                    if (count($messagesResponse['data']) <= 5) {
-                        Log::debug('Checking message', [
-                            'msg_id' => $msgId,
-                            'subject' => $msg['subject'] ?? 'no subject',
-                            'looking_for' => $messageId
-                        ]);
-                    }
-
-                    if ($msgId == $messageId) {
+                    // Try both string comparison and converting to same type
+                    if ($msgId == $messageId || (string)$msgId === (string)$messageId) {
                         $folderId = $inboxFolderId;
                         $foundMessage = $msg;
                         Log::info('Message found in Inbox', [
                             'message_id' => $messageId,
+                            'found_message_id' => $msgId,
                             'folder_id' => $folderId,
                             'attempt' => $attempt,
                             'subject' => $msg['subject'] ?? 'no subject'
