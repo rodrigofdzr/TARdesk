@@ -528,34 +528,72 @@ class EmailToTicketService
         }
 
         // First, we need to find the folderId for this message
-        // Search for the message to get its folderId
-        $searchUrl = "{$apiBase}/accounts/{$accountId}/messages/search";
-        Log::info('Searching for message to get folderId', [
-            'url' => $searchUrl,
-            'message_id' => $messageId
+        // Use the view endpoint to list recent messages and find our message
+        // According to Zoho API, we need to search in a specific folder or use the view endpoint
+        Log::info('Getting recent messages to find folderId', [
+            'message_id' => $messageId,
+            'account_id' => $accountId
         ]);
 
-        $searchParams = http_build_query([
-            'searchKey' => 'messageId',
-            'searchValue' => $messageId
-        ]);
-        $searchResponse = $this->zohoApiGet("{$searchUrl}?{$searchParams}", $accessToken);
+        // Try to get messages from Inbox folder first (most common case)
+        // Folder IDs in Zoho: Inbox is typically the first folder or we can try common folder IDs
+        $commonFolderIds = ['120838000000000001', 'Inbox', '1', 'INBOX'];
 
-        if (empty($searchResponse['data'][0])) {
-            Log::warning('Message not found in Zoho Mail search', [
-                'message_id' => $messageId,
-                'search_response' => $searchResponse
+        $folderId = null;
+        $foundMessage = null;
+
+        // First, try to get folder list
+        $foldersUrl = "{$apiBase}/accounts/{$accountId}/folders";
+        $foldersResponse = $this->zohoApiGet($foldersUrl, $accessToken);
+
+        if (!empty($foldersResponse['data'])) {
+            Log::info('Folders obtained from Zoho', [
+                'count' => count($foldersResponse['data']),
+                'folders' => array_map(function($f) {
+                    return [
+                        'id' => $f['folderId'] ?? 'unknown',
+                        'name' => $f['folderName'] ?? 'unknown'
+                    ];
+                }, $foldersResponse['data'])
             ]);
-            return [];
+
+            // Search for message in each folder
+            foreach ($foldersResponse['data'] as $folder) {
+                $testFolderId = $folder['folderId'] ?? null;
+                if (!$testFolderId) continue;
+
+                // Get recent messages from this folder
+                $viewUrl = "{$apiBase}/accounts/{$accountId}/messages/view";
+                $viewParams = http_build_query([
+                    'folderId' => $testFolderId,
+                    'limit' => 50,
+                    'sortBy' => 'receivedTime'
+                ]);
+
+                $messagesResponse = $this->zohoApiGet("{$viewUrl}?{$viewParams}", $accessToken);
+
+                if (!empty($messagesResponse['data'])) {
+                    // Search for our message by messageId
+                    foreach ($messagesResponse['data'] as $msg) {
+                        if (($msg['messageId'] ?? null) == $messageId) {
+                            $folderId = $testFolderId;
+                            $foundMessage = $msg;
+                            Log::info('Message found in folder', [
+                                'message_id' => $messageId,
+                                'folder_id' => $folderId,
+                                'folder_name' => $folder['folderName'] ?? 'unknown'
+                            ]);
+                            break 2; // Break both loops
+                        }
+                    }
+                }
+            }
         }
 
-        $messageData = $searchResponse['data'][0];
-        $folderId = $messageData['folderId'] ?? null;
-
-        if (!$folderId) {
-            Log::error('No folderId found for message', [
+        if (!$folderId || !$foundMessage) {
+            Log::warning('Message not found in any folder', [
                 'message_id' => $messageId,
-                'message_data' => $messageData
+                'searched_folders' => !empty($foldersResponse['data']) ? count($foldersResponse['data']) : 0
             ]);
             return [];
         }
